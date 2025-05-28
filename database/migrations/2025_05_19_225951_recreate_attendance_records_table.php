@@ -11,13 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Verificar se a tabela existe e eliminá-la
+        if (Schema::hasTable('attendance_records')) {
+            Schema::drop('attendance_records');
+        }
+
+        // Criar a tabela novamente com todas as colunas necessárias
         Schema::create('attendance_records', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('user_id');
             $table->dateTime('entry_time')->nullable();
             $table->dateTime('exit_time')->nullable();
             $table->string('status')->default('registered');
             $table->timestamps();
+            
+            // Adicionar chave estrangeira
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

@@ -76,3 +76,11 @@ Route::get('/test-api', function() {
 Route::post('/test-endpoint', function () {
     return response()->json(['success' => true, 'message' => 'Test endpoint works!']);
 });
+
+Route::post('/register-attendance-dashboard', [App\Http\Controllers\AttendanceController::class, 'registerFromDashboard'])->name('attendance.register.dashboard');
+
+Route::post('/register-attendance', [App\Http\Controllers\AttendanceController::class, 'registerAttendance'])->name('attendance.register');
+
+Route::post('/register-attendance', [App\Http\Controllers\AttendanceController::class, 'registerAttendance'])
+    ->name('attendance.register')
+    ->middleware('auth');
