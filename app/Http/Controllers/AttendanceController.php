@@ -266,6 +266,19 @@ class AttendanceController extends Controller
         ]);
     }
     
+    private function calculateEuclideanDistance($vec1, $vec2)
+    {
+        if (count($vec1) !== count($vec2)) {
+            return 999; // Retorna um valor grande para indicar incompatibilidade
+        }
+        
+        $sum = 0;
+        for ($i = 0; $i < count($vec1); $i++) {
+            $sum += pow($vec1[$i] - $vec2[$i], 2);
+        }
+        
+        return sqrt($sum);
+    }
     
     // Método para calcular o próximo horário de registro esperado
     private function getNextRegisterTime($userId)
