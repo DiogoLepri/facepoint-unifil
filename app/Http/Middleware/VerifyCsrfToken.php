@@ -12,7 +12,8 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        // Adicione esta linha
         '/facial-login',
+        '/api/attendance/verify',
+        '/api/attendance/status',
     ];
 }

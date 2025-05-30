@@ -106,6 +106,34 @@ class AttendanceController extends Controller
         }
     }
     
+    public function status(Request $request)
+    {
+        // Check if user is authenticated via session
+        if (Auth::check()) {
+            $user = Auth::user();
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuário não autenticado'
+            ]);
+        }
+        
+        // Get last attendance record for today
+        $today = now()->format('Y-m-d');
+        $lastRecord = AttendanceRecord::where('user_id', $user->id)
+            ->whereDate('created_at', $today)
+            ->orderBy('created_at', 'desc')
+            ->first();
+        
+        return response()->json([
+            'success' => true,
+            'last_record' => $lastRecord ? [
+                'created_at' => $lastRecord->created_at,
+                'type' => $lastRecord->exit_time ? 'Saída' : 'Entrada'
+            ] : null
+        ]);
+    }
+
     public function verify(Request $request)
     {
         $request->validate([

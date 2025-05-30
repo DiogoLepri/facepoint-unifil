@@ -30,6 +30,7 @@ Route::get('/admin/login', [AuthController::class, 'showAdminLoginForm'])->name(
 
 // API para reconhecimento facial
 Route::post('/api/attendance/verify', [AttendanceController::class, 'verify']);
+Route::get('/api/attendance/status', [AttendanceController::class, 'status']);
 
 // Rotas protegidas por autenticação
 Route::middleware(['auth'])->group(function () {
