@@ -21,3 +21,11 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# DeepFace specific ignores
+/deepface_env/
+/face_database/
+*.pyc
+__pycache__/
+.DS_Store
+*.log

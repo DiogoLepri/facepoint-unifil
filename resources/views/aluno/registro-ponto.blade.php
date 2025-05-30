@@ -110,7 +110,6 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const video = document.getElementById('video');
@@ -123,117 +122,128 @@
         const statusMessage = document.getElementById('status-message');
         
         let stream = null;
-        
-        // Carregar modelos do face-api
-        Promise.all([
-            faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-            faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-            faceapi.nets.faceRecognitionNet.loadFromUri('/models')
-        ]).then(() => {
-            console.log('Modelos carregados');
-        });
+        let faceDetectionInterval = null;
         
         // Ativar câmera
         ativarCameraBtn.addEventListener('click', async () => {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: 400, 
+                        height: 300,
+                        facingMode: 'user'
+                    } 
+                });
                 video.srcObject = stream;
                 video.style.display = 'block';
                 cameraPlaceholder.style.display = 'none';
                 ativarCameraBtn.textContent = 'VERIFICANDO...';
                 ativarCameraBtn.disabled = true;
                 
-                // Iniciar detecção contínua
+                // Iniciar detecção após o vídeo começar a reproduzir
                 video.addEventListener('play', startFaceDetection);
             } catch (err) {
                 console.error('Erro ao acessar câmera:', err);
                 alert('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+                resetCamera();
             }
         });
         
-        async function startFaceDetection() {
-            const interval = setInterval(async () => {
-                if (!video.srcObject) {
-                    clearInterval(interval);
-                    return;
+        function startFaceDetection() {
+            // Aguardar um pouco para a câmera estabilizar
+            setTimeout(() => {
+                captureAndRecognize();
+            }, 2000);
+        }
+        
+        function captureAndRecognize() {
+            if (!video.srcObject) {
+                return;
+            }
+            
+            // Capturar frame do vídeo
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Converter canvas para base64
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+            
+            // Exibir a imagem capturada
+            video.style.display = 'none';
+            canvas.style.display = 'block';
+            
+            // Enviar para o DeepFace API
+            fetch('/api/attendance/verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ 
+                    image_data: imageData 
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    ativarCameraBtn.textContent = 'REGISTRADO COM SUCESSO';
+                    ativarCameraBtn.classList.remove('btn-success');
+                    ativarCameraBtn.classList.add('btn-outline-success');
+                    
+                    // Mostrar informações
+                    statusContainer.style.display = 'block';
+                    lastDate.textContent = new Date().toLocaleDateString('pt-BR');
+                    lastType.textContent = data.type || 'Entrada';
+                    
+                    let successMessage = 'Registrado com sucesso!';
+                    if (data.confidence) {
+                        successMessage += ` (Confiança: ${data.confidence}%)`;
+                    }
+                    
+                    statusMessage.textContent = successMessage;
+                    statusMessage.classList.remove('text-danger');
+                    statusMessage.classList.add('text-success');
+                    
+                    // Redirecionar após 3 segundos
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 3000);
+                } else {
+                    ativarCameraBtn.textContent = 'FALHA NO RECONHECIMENTO';
+                    ativarCameraBtn.classList.remove('btn-success');
+                    ativarCameraBtn.classList.add('btn-outline-danger');
+                    
+                    // Mostrar mensagem de erro
+                    statusContainer.style.display = 'block';
+                    
+                    let errorMessage = data.message || 'Usuário não reconhecido. Tente novamente.';
+                    if (data.confidence) {
+                        errorMessage += ` (Confiança: ${data.confidence}%)`;
+                    }
+                    
+                    statusMessage.textContent = errorMessage;
+                    statusMessage.classList.remove('text-success');
+                    statusMessage.classList.add('text-danger');
+                    
+                    // Permitir nova tentativa após 3 segundos
+                    setTimeout(resetCamera, 3000);
                 }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                ativarCameraBtn.textContent = 'ERRO DE COMUNICAÇÃO';
+                ativarCameraBtn.classList.remove('btn-success');
+                ativarCameraBtn.classList.add('btn-outline-danger');
                 
-                // Detectar face
-                const detections = await faceapi.detectSingleFace(
-                    video, 
-                    new faceapi.TinyFaceDetectorOptions()
-                ).withFaceLandmarks().withFaceDescriptor();
+                // Mostrar mensagem de erro
+                statusContainer.style.display = 'block';
+                statusMessage.textContent = 'Erro de comunicação com o servidor.';
+                statusMessage.classList.remove('text-success');
+                statusMessage.classList.add('text-danger');
                 
-                if (detections) {
-                    clearInterval(interval);
-                    
-                    // Capturar frame para exibição
-                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-                    video.style.display = 'none';
-                    canvas.style.display = 'block';
-                    
-                    // Enviar para verificação
-                    const faceDescriptor = Array.from(detections.descriptor);
-                    
-                    fetch('/api/attendance/verify', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({ face_descriptor: faceDescriptor })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            ativarCameraBtn.textContent = 'REGISTRADO COM SUCESSO';
-                            ativarCameraBtn.classList.remove('btn-success');
-                            ativarCameraBtn.classList.add('btn-outline-success');
-                            
-                            // Mostrar informações
-                            statusContainer.style.display = 'block';
-                            lastDate.textContent = new Date().toLocaleDateString('pt-BR');
-                            lastType.textContent = data.type || 'Entrada';
-                            statusMessage.textContent = 'Registrado com sucesso!';
-                            statusMessage.classList.remove('text-danger');
-                            statusMessage.classList.add('text-success');
-                            
-                            // Redirecionar após 3 segundos
-                            setTimeout(() => {
-                                window.location.href = '/dashboard';
-                            }, 3000);
-                        } else {
-                            ativarCameraBtn.textContent = 'FALHA NO RECONHECIMENTO';
-                            ativarCameraBtn.classList.remove('btn-success');
-                            ativarCameraBtn.classList.add('btn-outline-danger');
-                            
-                            // Mostrar mensagem de erro
-                            statusContainer.style.display = 'block';
-                            statusMessage.textContent = data.message || 'Usuário não reconhecido. Tente novamente.';
-                            statusMessage.classList.remove('text-success');
-                            statusMessage.classList.add('text-danger');
-                            
-                            // Permitir nova tentativa após 2 segundos
-                            setTimeout(resetCamera, 2000);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erro:', error);
-                        ativarCameraBtn.textContent = 'ERRO DE COMUNICAÇÃO';
-                        ativarCameraBtn.classList.remove('btn-success');
-                        ativarCameraBtn.classList.add('btn-outline-danger');
-                        
-                        // Mostrar mensagem de erro
-                        statusContainer.style.display = 'block';
-                        statusMessage.textContent = 'Erro de comunicação com o servidor.';
-                        statusMessage.classList.remove('text-success');
-                        statusMessage.classList.add('text-danger');
-                        
-                        // Permitir nova tentativa após 2 segundos
-                        setTimeout(resetCamera, 2000);
-                    });
-                }
-            }, 500);
+                // Permitir nova tentativa após 3 segundos
+                setTimeout(resetCamera, 3000);
+            });
         }
         
         function resetCamera() {

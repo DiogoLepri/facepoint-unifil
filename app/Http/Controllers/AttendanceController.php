@@ -137,92 +137,135 @@ class AttendanceController extends Controller
     public function verify(Request $request)
     {
         $request->validate([
-            'face_descriptor' => 'required|array'
+            'image_data' => 'required|string'
         ]);
         
-        $inputDescriptor = $request->face_descriptor;
+        $imageData = $request->image_data;
         
-        // Obter todos os usuários com registros faciais
-        $users = User::whereHas('recognitionRecords')->with('recognitionRecords')->get();
+        // Initialize DeepFace service
+        $deepFaceService = new \App\Services\DeepFaceService();
         
-        $bestMatch = null;
-        $bestMatchDistance = 0.6; // Limiar máximo para considerar uma correspondência (menor é melhor)
-        
-        foreach ($users as $user) {
-            foreach ($user->recognitionRecords as $record) {
-                if ($record->face_descriptor) {
-                    $storedDescriptor = json_decode($record->face_descriptor);
-                    
-                    if ($storedDescriptor) {
-                        $distance = $this->calculateEuclideanDistance($inputDescriptor, $storedDescriptor);
-                        
-                        if ($distance < $bestMatchDistance) {
-                            $bestMatchDistance = $distance;
-                            $bestMatch = $user;
-                        }
-                    }
-                }
-            }
+        // Validate image data
+        if (!$deepFaceService->validateImageData($imageData)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dados de imagem inválidos'
+            ], 400);
         }
         
-        if ($bestMatch) {
-            // Verificar se já existe um registro para hoje
-            $today = now()->format('Y-m-d');
-            $existingRecord = AttendanceRecord::where('user_id', $bestMatch->id)
-                ->whereDate('created_at', $today)
-                ->first();
-            
-            $type = 'Entrada';
-            
-            if ($existingRecord) {
-                // Se já tem entrada, registra saída
-                if ($existingRecord->entry_time && !$existingRecord->exit_time) {
-                    $existingRecord->exit_time = now();
-                    $existingRecord->save();
-                    $type = 'Saída';
-                } else {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Você já registrou entrada e saída hoje.'
-                    ]);
-                }
-            } else {
-                // Criar novo registro com DB::insert para evitar problemas com formatos
-                DB::insert(
-                    'insert into attendance_records (user_id, entry_time, status, created_at, updated_at) values (?, ?, ?, ?, ?)',
-                    [$bestMatch->id, now(), 'registered', now(), now()]
-                );
-            }
-            
+        // Check if DeepFace API is healthy
+        $healthCheck = $deepFaceService->healthCheck();
+        if (!$healthCheck['success']) {
+            Log::error('DeepFace API health check failed', $healthCheck);
             return response()->json([
-                'success' => true,
-                'user' => [
-                    'id' => $bestMatch->id,
-                    'name' => $bestMatch->name,
-                ],
-                'type' => $type
+                'success' => false,
+                'message' => 'Serviço de reconhecimento facial temporariamente indisponível'
+            ], 503);
+        }
+        
+        // Perform face recognition
+        $recognitionResult = $deepFaceService->recognizeFace($imageData);
+        
+        if (!$recognitionResult['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $recognitionResult['data']['message'] ?? 'Falha no reconhecimento facial',
+                'confidence' => $recognitionResult['data']['confidence'] ?? null
+            ]);
+        }
+        
+        $recognitionData = $recognitionResult['data'];
+        
+        if (!$recognitionData['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $recognitionData['message'] ?? 'Usuário não reconhecido',
+                'confidence' => $recognitionData['confidence'] ?? null
+            ]);
+        }
+        
+        // Get user from recognition result
+        $userId = $recognitionData['user_id'];
+        $confidence = $recognitionData['confidence'] ?? 0;
+        
+        // Find Laravel user
+        $user = User::find($userId);
+        if (!$user) {
+            Log::warning('DeepFace recognized user not found in Laravel', [
+                'deepface_user_id' => $userId
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuário não encontrado no sistema'
+            ]);
+        }
+        
+        // Check confidence threshold
+        if (!$deepFaceService->meetsConfidenceThreshold($confidence)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Confiança insuficiente: {$confidence}%",
+                'confidence' => $confidence
+            ]);
+        }
+        
+        // Verificar se já existe um registro para hoje
+        $today = now()->format('Y-m-d');
+        $existingRecord = AttendanceRecord::where('user_id', $user->id)
+            ->whereDate('created_at', $today)
+            ->first();
+        
+        $type = 'Entrada';
+        
+        if ($existingRecord) {
+            // Se já tem entrada, registra saída
+            if ($existingRecord->entry_time && !$existingRecord->exit_time) {
+                $existingRecord->exit_time = now();
+                $existingRecord->save();
+                $type = 'Saída';
+                
+                Log::info('Face recognition - Exit registered', [
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'confidence' => $confidence,
+                    'record_id' => $existingRecord->id
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Você já registrou entrada e saída hoje.',
+                    'confidence' => $confidence
+                ]);
+            }
+        } else {
+            // Criar novo registro com DB::insert para evitar problemas com formatos
+            DB::insert(
+                'insert into attendance_records (user_id, entry_time, status, created_at, updated_at) values (?, ?, ?, ?, ?)',
+                [$user->id, now(), 'registered', now(), now()]
+            );
+            
+            Log::info('Face recognition - Entry registered', [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'confidence' => $confidence
             ]);
         }
         
         return response()->json([
-            'success' => false,
-            'message' => 'Usuário não reconhecido'
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+            ],
+            'type' => $type,
+            'confidence' => $confidence,
+            'recognition_data' => [
+                'distance' => $recognitionData['distance'] ?? null,
+                'identity_path' => $recognitionData['identity_path'] ?? null
+            ]
         ]);
     }
     
-    private function calculateEuclideanDistance($vec1, $vec2)
-    {
-        if (count($vec1) !== count($vec2)) {
-            return 999; // Retorna um valor grande para indicar incompatibilidade
-        }
-        
-        $sum = 0;
-        for ($i = 0; $i < count($vec1); $i++) {
-            $sum += pow($vec1[$i] - $vec2[$i], 2);
-        }
-        
-        return sqrt($sum);
-    }
     
     // Método para calcular o próximo horário de registro esperado
     private function getNextRegisterTime($userId)
