@@ -234,6 +234,7 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Usuário reconhecido com sucesso',
+                    'user_name' => $bestMatch->name,
                     'redirect' => $bestMatch->role === 'admin' ? route('admin.dashboard') : route('dashboard')
                 ]);
             } else {

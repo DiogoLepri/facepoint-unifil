@@ -224,6 +224,88 @@
         border: 1px solid #b8daff;
     }
     
+    /* Confirmation Modal Styles */
+    .confirmation-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: none;
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .confirmation-modal.show {
+        display: flex;
+    }
+    
+    .confirmation-content {
+        background: white;
+        border-radius: 15px;
+        padding: 40px;
+        text-align: center;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    .confirmation-content h3 {
+        color: #003366;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    
+    .confirmation-content p {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 1.1rem;
+    }
+    
+    .user-name {
+        color: #003366;
+        font-weight: bold;
+        font-size: 1.3rem;
+    }
+    
+    .confirmation-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+    }
+    
+    .btn-confirm {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .btn-confirm:hover {
+        background-color: #218838;
+    }
+    
+    .btn-cancel {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .btn-cancel:hover {
+        background-color: #c82333;
+    }
+    
     @media (max-width: 768px) {
         .login-container {
             grid-template-columns: 1fr;
@@ -345,6 +427,18 @@
         © 2025 UniFil NPI - Sistema desenvolvido conforme especificações LGPD
     </div>
 </div>
+
+<!-- Confirmation Modal -->
+<div id="confirmationModal" class="confirmation-modal">
+    <div class="confirmation-content">
+        <h3>Confirmar Identidade</h3>
+        <p>Você é <span id="userName" class="user-name"></span>?</p>
+        <div class="confirmation-buttons">
+            <button id="confirmYes" class="btn-confirm">Sim, sou eu</button>
+            <button id="confirmNo" class="btn-cancel">Não sou eu</button>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -409,15 +503,15 @@ document.addEventListener('DOMContentLoaded', function() {
             video.srcObject = stream;
             video.style.display = 'block';
             cameraPlaceholder.style.display = 'none';
-            cameraStatus.textContent = 'Câmera ativada - Posicione seu rosto';
+            cameraStatus.textContent = 'Câmera ativada - Reconhecimento automático ativo';
             
-            ativarBtn.textContent = 'CAPTURAR IMAGEM';
+            ativarBtn.textContent = 'RECONHECIMENTO ATIVO';
             ativarBtn.classList.remove('btn-success');
             ativarBtn.classList.add('btn-primary');
+            ativarBtn.disabled = true;
             
-            // Change button functionality to capture
-            ativarBtn.removeEventListener('click', arguments.callee);
-            ativarBtn.addEventListener('click', captureImage);
+            // Start automatic recognition
+            startContinuousRecognition();
             
         } catch (error) {
             console.error('Error accessing camera:', error);
@@ -425,65 +519,95 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    async function captureImage() {
-        if (isProcessing) return;
+    let recognitionInterval;
+    
+    function startContinuousRecognition() {
+        showStatus('Procurando rosto...', 'processing');
         
+        recognitionInterval = setInterval(async () => {
+            if (isProcessing) return;
+            
+            try {
+                // Detect face
+                const detections = await faceapi
+                    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+                
+                if (detections) {
+                    clearInterval(recognitionInterval);
+                    await processRecognition(detections);
+                }
+            } catch (error) {
+                console.error('Error during continuous recognition:', error);
+            }
+        }, 1000); // Check every second
+    }
+    
+    async function processRecognition(detections) {
         isProcessing = true;
         showStatus('Processando reconhecimento facial...', 'processing');
         
-        // Draw video frame to canvas
-        const context = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0);
+        const faceDescriptor = Array.from(detections.descriptor);
         
         try {
-            // Detect face
-            const detections = await faceapi
-                .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                .withFaceLandmarks()
-                .withFaceDescriptor();
+            const response = await fetch('/facial-login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    face_descriptor: faceDescriptor
+                })
+            });
             
-            if (detections) {
-                const faceDescriptor = Array.from(detections.descriptor);
-                
-                // Send to server
-                fetch('/facial-login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify({
-                        face_descriptor: faceDescriptor
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showStatus('Reconhecimento bem-sucedido! Redirecionando...', 'success');
-                        setTimeout(() => {
-                            window.location.href = data.redirect || '/dashboard';
-                        }, 1500);
-                    } else {
-                        showStatus(data.message || 'Falha no reconhecimento. Tente novamente.', 'error');
-                        isProcessing = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showStatus('Erro ao processar reconhecimento facial', 'error');
-                    isProcessing = false;
-                });
+            const data = await response.json();
+            
+            if (data.success) {
+                showConfirmationModal(data.user_name, data.redirect || '/dashboard');
             } else {
-                showStatus('Nenhum rosto detectado. Tente novamente.', 'error');
-                isProcessing = false;
+                showStatus(data.message || 'Falha no reconhecimento. Tentando novamente...', 'error');
+                setTimeout(() => {
+                    isProcessing = false;
+                    startContinuousRecognition();
+                }, 2000);
             }
         } catch (error) {
-            console.error('Error during face detection:', error);
-            showStatus('Erro durante detecção facial', 'error');
-            isProcessing = false;
+            console.error('Error:', error);
+            showStatus('Erro ao processar reconhecimento facial', 'error');
+            setTimeout(() => {
+                isProcessing = false;
+                startContinuousRecognition();
+            }, 2000);
         }
+    }
+    
+    function showConfirmationModal(userName, redirectUrl) {
+        const modal = document.getElementById('confirmationModal');
+        const userNameElement = document.getElementById('userName');
+        const confirmYes = document.getElementById('confirmYes');
+        const confirmNo = document.getElementById('confirmNo');
+        
+        userNameElement.textContent = userName;
+        modal.classList.add('show');
+        
+        // Stop camera while showing modal
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        
+        confirmYes.onclick = () => {
+            showStatus('Acesso confirmado! Redirecionando...', 'success');
+            setTimeout(() => {
+                window.location.href = redirectUrl;
+            }, 1500);
+        };
+        
+        confirmNo.onclick = () => {
+            modal.classList.remove('show');
+            window.location.href = '/';
+        };
     }
 
     // Cleanup on page unload
