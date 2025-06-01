@@ -19,6 +19,9 @@ return [
     // Recognition confidence threshold (0-100)
     'confidence_threshold' => env('DEEPFACE_CONFIDENCE_THRESHOLD', 75),
     
+    // Face descriptor distance threshold for recognition (lower = stricter)
+    'recognition_threshold' => env('DEEPFACE_RECOGNITION_THRESHOLD', 0.4),
+    
     // Maximum image size in bytes (5MB default)
     'max_image_size' => env('DEEPFACE_MAX_IMAGE_SIZE', 5242880),
     

@@ -161,13 +161,19 @@ class AuthController extends Controller
             }
             
             $bestMatch = null;
-            $bestMatchDistance = 0.6; // Threshold (lower is better)
-            $bestMatchScore = 1.0;
+            $recognitionThreshold = config('deepface.recognition_threshold', 0.4); // Configurable threshold
+            $bestMatchDistance = PHP_FLOAT_MAX; // Initialize to maximum value
             $matchedRecord = null;
+            
+            \Log::info('Starting facial recognition with threshold: ' . $recognitionThreshold);
+            
+            $totalComparisons = 0;
+            $validComparisons = 0;
             
             foreach ($users as $user) {
                 \Log::debug("Checking user ID: " . $user->id);
                 foreach ($user->recognitionRecords as $record) {
+                    $totalComparisons++;
                     try {
                         if (empty($record->face_descriptor)) {
                             \Log::warning('Empty face descriptor for record ID: ' . $record->id);
@@ -198,14 +204,23 @@ class AuthController extends Controller
                             continue;
                         }
                         
+                        // Validate descriptor values are numeric
+                        if (!$this->validateDescriptorValues($inputDescriptor) || !$this->validateDescriptorValues($storedDescriptor)) {
+                            \Log::warning('Invalid descriptor values for record ID: ' . $record->id);
+                            continue;
+                        }
+                        
+                        $validComparisons++;
                         $distance = $this->calculateEuclideanDistance($inputDescriptor, $storedDescriptor);
                         
-                        \Log::info('User ID: ' . $user->id . ', Record ID: ' . $record->id . ', Distance: ' . $distance);
+                        \Log::info('User ID: ' . $user->id . ', Record ID: ' . $record->id . ', Distance: ' . $distance . ', Threshold: ' . $recognitionThreshold);
                         
-                        if ($distance < $bestMatchDistance && $distance < $bestMatchScore) {
-                            $bestMatchScore = $distance;
+                        // Only consider matches below the threshold AND better than current best
+                        if ($distance < $recognitionThreshold && $distance < $bestMatchDistance) {
+                            $bestMatchDistance = $distance;
                             $bestMatch = $user;
                             $matchedRecord = $record;
+                            \Log::info('New best match found: User ID ' . $user->id . ' with distance ' . $distance);
                         }
                     } catch (\Exception $e) {
                         \Log::error('Error processing record ID ' . $record->id . ': ' . $e->getMessage());
@@ -214,32 +229,44 @@ class AuthController extends Controller
                 }
             }
             
-            if ($bestMatch) {
-                // User found, log them in
-                Auth::login($bestMatch);
+            \Log::info('Recognition completed', [
+                'total_comparisons' => $totalComparisons,
+                'valid_comparisons' => $validComparisons,
+                'best_distance' => $bestMatchDistance,
+                'threshold' => $recognitionThreshold,
+                'match_found' => $bestMatch !== null
+            ]);
+            
+            if ($bestMatch && $bestMatchDistance < $recognitionThreshold) {
+                \Log::info('Valid facial match found', [
+                    'user_id' => $bestMatch->id,
+                    'user_name' => $bestMatch->name,
+                    'distance' => $bestMatchDistance,
+                    'threshold' => $recognitionThreshold
+                ]);
                 
-                // Record successful recognition for analytics
-                try {
-                    RecognitionRecord::create([
-                        'user_id' => $bestMatch->id,
-                        'face_descriptor' => json_encode($inputDescriptor),
-                        'capture_type' => 'successful_login',
-                    ]);
-                    
-                    \Log::info('Successfully authenticated user: ' . $bestMatch->id . ' with match score: ' . $bestMatchScore);
-                } catch (\Exception $e) {
-                    \Log::warning('Failed to record successful recognition: ' . $e->getMessage());
-                }
+                // Store match data in session for confirmation
+                session([
+                    'facial_match_user_id' => $bestMatch->id,
+                    'facial_match_distance' => $bestMatchDistance,
+                    'facial_match_descriptor' => $inputDescriptor,
+                    'facial_match_timestamp' => time()
+                ]);
                 
                 return response()->json([
                     'success' => true,
                     'message' => 'Usuário reconhecido com sucesso',
                     'user_name' => $bestMatch->name,
-                    'redirect' => $bestMatch->role === 'admin' ? route('admin.dashboard') : route('dashboard')
+                    'user_id' => $bestMatch->id,
+                    'requires_confirmation' => true
                 ]);
             } else {
                 // No match found
-                \Log::warning('No facial match found for login attempt');
+                $logMessage = 'No facial match found for login attempt';
+                if ($bestMatch) {
+                    $logMessage .= ' - Best match was ' . $bestMatch->name . ' with distance ' . $bestMatchDistance . ' (threshold: ' . $recognitionThreshold . ')';
+                }
+                \Log::warning($logMessage);
                 
                 // Optional: Record failed attempt for security analysis
                 try {
@@ -269,6 +296,107 @@ class AuthController extends Controller
         }
     }
 
+    public function confirmFacialLogin(Request $request)
+    {
+        try {
+            // Check if we have a pending facial match
+            $userId = session('facial_match_user_id');
+            $matchTimestamp = session('facial_match_timestamp');
+            
+            if (!$userId || !$matchTimestamp) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nenhuma correspondência facial pendente encontrada'
+                ], 400);
+            }
+            
+            // Check if match is not too old (5 minutes timeout)
+            if (time() - $matchTimestamp > 300) {
+                session()->forget(['facial_match_user_id', 'facial_match_distance', 'facial_match_descriptor', 'facial_match_timestamp']);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tempo limite excedido. Tente novamente.'
+                ], 400);
+            }
+            
+            $user = User::find($userId);
+            if (!$user) {
+                session()->forget(['facial_match_user_id', 'facial_match_distance', 'facial_match_descriptor', 'facial_match_timestamp']);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuário não encontrado'
+                ], 404);
+            }
+            
+            // Log the user in
+            Auth::login($user);
+            
+            // Record successful recognition for analytics
+            try {
+                RecognitionRecord::create([
+                    'user_id' => $user->id,
+                    'face_descriptor' => json_encode(session('facial_match_descriptor')),
+                    'capture_type' => 'confirmed_login',
+                ]);
+                
+                \Log::info('Successfully authenticated user after confirmation: ' . $user->id . ' with distance: ' . session('facial_match_distance'));
+            } catch (\Exception $e) {
+                \Log::warning('Failed to record successful recognition: ' . $e->getMessage());
+            }
+            
+            // Clear session data
+            session()->forget(['facial_match_user_id', 'facial_match_distance', 'facial_match_descriptor', 'facial_match_timestamp']);
+            
+            // Determine redirect URL - students go to /dashboard (which should redirect to aluno/dashboard)
+            $redirectUrl = ($user->role === 'admin') ? route('admin.dashboard') : route('dashboard');
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Login confirmado com sucesso',
+                'redirect' => $redirectUrl
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Facial login confirmation error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro durante confirmação de login'
+            ], 500);
+        }
+    }
+    
+    public function rejectFacialLogin(Request $request)
+    {
+        try {
+            // Log the rejection for security purposes
+            $userId = session('facial_match_user_id');
+            if ($userId) {
+                \Log::warning('Facial login rejected by user', [
+                    'matched_user_id' => $userId,
+                    'distance' => session('facial_match_distance'),
+                    'timestamp' => session('facial_match_timestamp')
+                ]);
+            }
+            
+            // Clear session data
+            session()->forget(['facial_match_user_id', 'facial_match_distance', 'facial_match_descriptor', 'facial_match_timestamp']);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Correspondência rejeitada'
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Facial login rejection error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro durante rejeição'
+            ], 500);
+        }
+    }
+
     public function logout(Request $request)
     {
         Auth::logout();
@@ -279,6 +407,21 @@ class AuthController extends Controller
         return redirect('/');
     }
 
+    private function validateDescriptorValues($descriptor)
+    {
+        if (!is_array($descriptor)) {
+            return false;
+        }
+        
+        foreach ($descriptor as $value) {
+            if (!is_numeric($value) || !is_finite($value)) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
     private function calculateEuclideanDistance($descriptor1, $descriptor2)
     {
         try {
@@ -287,7 +430,7 @@ class AuthController extends Controller
                     'descriptor1_type' => gettype($descriptor1), 
                     'descriptor2_type' => gettype($descriptor2)
                 ]);
-                return 1.0; // Return max distance on error
+                return PHP_FLOAT_MAX; // Return max distance on error
             }
             
             if (count($descriptor1) !== count($descriptor2)) {
@@ -295,11 +438,16 @@ class AuthController extends Controller
                     'descriptor1_length' => count($descriptor1),
                     'descriptor2_length' => count($descriptor2)
                 ]);
-                return 1.0; // Return max distance on error
+                return PHP_FLOAT_MAX; // Return max distance on error
             }
             
             $sum = 0;
             for ($i = 0; $i < count($descriptor1); $i++) {
+                if (!is_numeric($descriptor1[$i]) || !is_numeric($descriptor2[$i])) {
+                    \Log::warning('Non-numeric values in descriptors');
+                    return PHP_FLOAT_MAX;
+                }
+                
                 $diff = $descriptor1[$i] - $descriptor2[$i];
                 $sum += $diff * $diff;
             }
@@ -307,7 +455,7 @@ class AuthController extends Controller
             return sqrt($sum);
         } catch (\Exception $e) {
             \Log::error('Error calculating distance: ' . $e->getMessage());
-            return 1.0; // Return max distance on error
+            return PHP_FLOAT_MAX; // Return max distance on error
         }
     }
 }

@@ -564,8 +564,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const data = await response.json();
             
-            if (data.success) {
-                showConfirmationModal(data.user_name, data.redirect || '/dashboard');
+            if (data.success && data.requires_confirmation) {
+                showConfirmationModal(data.user_name);
+            } else if (data.success) {
+                // Direct login without confirmation (shouldn't happen now)
+                showStatus('Redirecionando...', 'success');
+                setTimeout(() => {
+                    window.location.href = data.redirect || '/dashboard';
+                }, 1500);
             } else {
                 showStatus(data.message || 'Falha no reconhecimento. Tentando novamente...', 'error');
                 setTimeout(() => {
@@ -583,7 +589,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    function showConfirmationModal(userName, redirectUrl) {
+    function showConfirmationModal(userName) {
         const modal = document.getElementById('confirmationModal');
         const userNameElement = document.getElementById('userName');
         const confirmYes = document.getElementById('confirmYes');
@@ -597,14 +603,62 @@ document.addEventListener('DOMContentLoaded', function() {
             stream.getTracks().forEach(track => track.stop());
         }
         
-        confirmYes.onclick = () => {
-            showStatus('Acesso confirmado! Redirecionando...', 'success');
-            setTimeout(() => {
-                window.location.href = redirectUrl;
-            }, 1500);
+        confirmYes.onclick = async () => {
+            confirmYes.disabled = true;
+            confirmNo.disabled = true;
+            
+            try {
+                const response = await fetch('/facial-login/confirm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    modal.classList.remove('show');
+                    showStatus('Acesso confirmado! Redirecionando...', 'success');
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/dashboard';
+                    }, 1500);
+                } else {
+                    modal.classList.remove('show');
+                    showStatus(data.message || 'Erro na confirmação', 'error');
+                    setTimeout(() => {
+                        isProcessing = false;
+                        startContinuousRecognition();
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Error confirming login:', error);
+                modal.classList.remove('show');
+                showStatus('Erro na confirmação', 'error');
+                setTimeout(() => {
+                    isProcessing = false;
+                    startContinuousRecognition();
+                }, 2000);
+            }
         };
         
-        confirmNo.onclick = () => {
+        confirmNo.onclick = async () => {
+            confirmYes.disabled = true;
+            confirmNo.disabled = true;
+            
+            try {
+                await fetch('/facial-login/reject', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+            } catch (error) {
+                console.error('Error rejecting login:', error);
+            }
+            
             modal.classList.remove('show');
             window.location.href = '/';
         };

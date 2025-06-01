@@ -25,7 +25,12 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/register', [AuthController::class, 'showRegistrationForm'])->name('register');
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/logout', function() {
+    return redirect()->route('login')->with('info', 'Para fazer logout, use o botão Sair.');
+})->name('logout.get');
 Route::post('/facial-login', [AuthController::class, 'facialLogin'])->name('facial.login');
+Route::post('/facial-login/confirm', [AuthController::class, 'confirmFacialLogin'])->name('facial.login.confirm');
+Route::post('/facial-login/reject', [AuthController::class, 'rejectFacialLogin'])->name('facial.login.reject');
 Route::get('/admin/login', [AuthController::class, 'showAdminLoginForm'])->name('admin.login');
 
 // API para reconhecimento facial
