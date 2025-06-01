@@ -51,14 +51,20 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'matricula' => 'required|string|max:20|unique:users',
-            'curso' => 'required|string|max:255',
+            'name' => 'required|string|max:255|regex:/^[A-Za-zÀ-ÿ\s]+$/',
+            'email' => 'required|string|email|max:255|unique:users|regex:/^[a-zA-Z0-9._%+-]+@edu\.unifil\.br$/',
+            'matricula' => 'required|string|size:9|regex:/^[0-9]{9}$/|unique:users',
+            'curso' => 'required|string|in:Ciencia da Computacao,Engenharia de Software',
             'password' => 'required|string|min:8|confirmed',
             'face_data' => 'required|string',
             'face_data_2' => 'required|string',
             'face_data_3' => 'required|string',
+        ], [
+            'name.regex' => 'O nome deve conter apenas letras e espaços.',
+            'email.regex' => 'O email deve terminar com @edu.unifil.br',
+            'matricula.size' => 'A matrícula deve ter exatamente 9 números.',
+            'matricula.regex' => 'A matrícula deve conter apenas números.',
+            'curso.in' => 'Selecione um curso válido.',
         ]);
 
         try {

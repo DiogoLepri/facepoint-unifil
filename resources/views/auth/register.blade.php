@@ -191,12 +191,15 @@
     }
     
     .photo-item {
-        width: 60px;
-        height: 60px;
-        border-radius: 8px;
+        width: 200px;
+        height: 200px;
+        border-radius: 15px;
         overflow: hidden;
-        border: 2px solid #ddd;
+        border: 3px solid #28a745;
         position: relative;
+        display: none;
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        background-color: #f8f9fa;
     }
     
     .photo-item img {
@@ -207,6 +210,7 @@
     
     .photo-item.captured {
         border-color: #28a745;
+        animation: fadeIn 0.5s ease-in;
     }
     
     .photo-label {
@@ -214,11 +218,101 @@
         bottom: 0;
         left: 0;
         right: 0;
-        background: rgba(0,0,0,0.7);
+        background: linear-gradient(to top, rgba(40, 167, 69, 0.9), transparent);
         color: white;
-        font-size: 10px;
+        font-size: 12px;
+        font-weight: 600;
         text-align: center;
-        padding: 2px;
+        padding: 8px 4px;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.8); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    
+    .camera-container.active {
+        border-color: #003366;
+        border-style: solid;
+        background-color: #f8f9fa;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(0, 51, 102, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(0, 51, 102, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(0, 51, 102, 0); }
+    }
+    
+    .face-guide {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 150px;
+        height: 190px;
+        border: 2px dashed rgba(0, 51, 102, 0.5);
+        border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+        pointer-events: none;
+        z-index: 10;
+    }
+    
+    .face-guide.detected {
+        border-color: #28a745;
+        border-style: solid;
+        animation: faceDetected 0.5s ease;
+    }
+    
+    @keyframes faceDetected {
+        0% { transform: translate(-50%, -50%) scale(1); }
+        50% { transform: translate(-50%, -50%) scale(1.1); }
+        100% { transform: translate(-50%, -50%) scale(1); }
+    }
+    
+    .quality-indicators {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin: 10px 0;
+        font-size: 0.85rem;
+    }
+    
+    .quality-indicator {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        border-radius: 15px;
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        transition: all 0.3s;
+    }
+    
+    .quality-indicator.good {
+        background-color: #d4edda;
+        border-color: #28a745;
+        color: #155724;
+    }
+    
+    .quality-indicator.bad {
+        background-color: #f8d7da;
+        border-color: #dc3545;
+        color: #721c24;
+    }
+    
+    .quality-indicator .icon {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #6c757d;
+    }
+    
+    .quality-indicator.good .icon {
+        background-color: #28a745;
+    }
+    
+    .quality-indicator.bad .icon {
+        background-color: #dc3545;
     }
     
     .capture-progress {
@@ -294,6 +388,8 @@
                                id="name" 
                                name="name" 
                                value="{{ old('name') }}" 
+                               pattern="[A-Za-zÀ-ÿ\s]+"
+                               title="Apenas letras e espaços são permitidos"
                                required 
                                autofocus>
                         @error('name')
@@ -308,6 +404,11 @@
                                id="matricula" 
                                name="matricula" 
                                value="{{ old('matricula') }}" 
+                               pattern="[0-9]{9}"
+                               maxlength="9"
+                               minlength="9"
+                               title="Matrícula deve conter exatamente 9 números"
+                               placeholder="000000000"
                                required>
                         @error('matricula')
                             <span class="invalid-feedback">{{ $message }}</span>
@@ -321,6 +422,8 @@
                                id="email" 
                                name="email" 
                                value="{{ old('email') }}" 
+                               pattern="[a-zA-Z0-9._%+-]+@edu\.unifil\.br$"
+                               title="Email deve terminar com @edu.unifil.br"
                                placeholder="seuemail@edu.unifil.br"
                                required>
                         @error('email')
@@ -330,12 +433,14 @@
                     
                     <div class="mb-3">
                         <label for="curso" class="form-label">Curso:</label>
-                        <input type="text" 
-                               class="form-control @error('curso') is-invalid @enderror" 
-                               id="curso" 
-                               name="curso" 
-                               value="{{ old('curso') }}" 
-                               required>
+                        <select class="form-control @error('curso') is-invalid @enderror" 
+                                id="curso" 
+                                name="curso" 
+                                required>
+                            <option value="">Selecione seu curso</option>
+                            <option value="Ciencia da Computacao" {{ old('curso') == 'Ciencia da Computacao' ? 'selected' : '' }}>Ciência da Computação</option>
+                            <option value="Engenharia de Software" {{ old('curso') == 'Engenharia de Software' ? 'selected' : '' }}>Engenharia de Software</option>
+                        </select>
                         @error('curso')
                             <span class="invalid-feedback">{{ $message }}</span>
                         @enderror
@@ -377,6 +482,22 @@
                                 <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM8 14.5a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13z"/>
                             </svg>
                         </div>
+                        <div class="face-guide" id="face-guide" style="display: none;"></div>
+                    </div>
+                    
+                    <div class="quality-indicators" id="quality-indicators" style="display: none;">
+                        <div class="quality-indicator" id="face-indicator">
+                            <div class="icon"></div>
+                            <span>Rosto</span>
+                        </div>
+                        <div class="quality-indicator" id="brightness-indicator">
+                            <div class="icon"></div>
+                            <span>Iluminação</span>
+                        </div>
+                        <div class="quality-indicator" id="size-indicator">
+                            <div class="icon"></div>
+                            <span>Tamanho</span>
+                        </div>
                     </div>
                     
                     <p class="camera-status" id="camera-status">Câmera desativada</p>
@@ -390,23 +511,14 @@
                             <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
                         </div>
                         <p class="capture-status">
-                            Foto <span id="capture-count">0</span>/3 - 
-                            <span id="position-instruction">Prepare-se</span>
+                            <span id="position-instruction">Olhe diretamente para a câmera</span>
                         </p>
                     </div>
                     
                     <div class="photo-preview" id="photo-preview" style="display: none;">
-                        <div class="photo-item" id="photo-1">
-                            <img src="" alt="Frontal">
-                            <div class="photo-label">Frontal</div>
-                        </div>
-                        <div class="photo-item" id="photo-2">
-                            <img src="" alt="Direita">
-                            <div class="photo-label">Direita</div>
-                        </div>
-                        <div class="photo-item" id="photo-3">
-                            <img src="" alt="Esquerda">
-                            <div class="photo-label">Esquerda</div>
+                        <div class="photo-item captured" id="photo-1">
+                            <img src="" alt="Foto Facial">
+                            <div class="photo-label">✓ Capturada</div>
                         </div>
                     </div>
                     
@@ -453,16 +565,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const positionInstruction = document.getElementById('position-instruction');
     
     let stream = null;
-    let currentCapture = 0;
-    let faceDescriptors = [];
-    let captureInterval = null;
+    let photoCaptured = false;
+    let faceDescriptor = null;
     let modelsLoaded = false;
-    
-    const instructions = [
-        "Olhe diretamente para a câmera",
-        "Vire o rosto levemente para a direita",
-        "Vire o rosto levemente para a esquerda"
-    ];
     
     // Load face-api models
     const MODEL_URL = '/models';
@@ -495,20 +600,31 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             video.srcObject = stream;
-            video.style.display = 'block';
-            cameraPlaceholder.style.display = 'none';
             
-            // Set canvas size
-            canvas.width = 200;
-            canvas.height = 200;
-            
-            // Update UI
-            cameraStatus.textContent = 'Câmera ativada - Posicione seu rosto';
-            ativarCameraBtn.textContent = 'CAPTURAR FOTOS';
-            ativarCameraBtn.onclick = startCapture;
+            video.onloadedmetadata = function() {
+                video.style.display = 'block';
+                cameraPlaceholder.style.display = 'none';
+                document.getElementById('video-container').classList.add('active');
+                
+                // Update UI
+                cameraStatus.textContent = 'Posicione seu rosto dentro do guia e aguarde a verificação';
+                ativarCameraBtn.textContent = 'CAPTURAR FOTO';
+                ativarCameraBtn.onclick = capturePhoto;
+                ativarCameraBtn.disabled = true; // Will be enabled when quality is good
+                
+                // Show face guide and quality indicators
+                document.getElementById('face-guide').style.display = 'block';
+                document.getElementById('quality-indicators').style.display = 'flex';
+                
+                // Start real-time verification
+                startRealTimeVerification();
+                
+                console.log('Video metadata loaded, dimensions:', video.videoWidth, 'x', video.videoHeight);
+            };
             
             captureProgress.style.display = 'block';
             photoPreview.style.display = 'flex';
+            photoPreview.style.justifyContent = 'center';
             
         } catch (error) {
             console.error('Error accessing camera:', error);
@@ -516,27 +632,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    async function startCapture() {
-        if (currentCapture >= 3) return;
-        
-        ativarCameraBtn.disabled = true;
-        positionInstruction.textContent = instructions[currentCapture];
-        
-        // Countdown before capture
-        let countdown = 3;
-        const countdownInterval = setInterval(() => {
-            cameraStatus.textContent = `Capturando em ${countdown}...`;
-            countdown--;
-            
-            if (countdown < 0) {
-                clearInterval(countdownInterval);
-                captureImage();
+    let verificationInterval;
+    let qualityStatus = {
+        face: false,
+        brightness: false,
+        size: false
+    };
+    
+    function startRealTimeVerification() {
+        verificationInterval = setInterval(async () => {
+            if (photoCaptured) {
+                clearInterval(verificationInterval);
+                return;
             }
-        }, 1000);
+            
+            await performQualityCheck();
+        }, 500); // Check every 500ms
     }
     
-    async function captureImage() {
-        // Draw video frame to canvas
+    async function performQualityCheck() {
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        
+        // Draw current video frame to canvas
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
         try {
@@ -546,62 +665,243 @@ document.addEventListener('DOMContentLoaded', function() {
                 .withFaceLandmarks()
                 .withFaceDescriptor();
             
+            const faceGuide = document.getElementById('face-guide');
+            const faceIndicator = document.getElementById('face-indicator');
+            const brightnessIndicator = document.getElementById('brightness-indicator');
+            const sizeIndicator = document.getElementById('size-indicator');
+            
             if (detections) {
-                // Save face descriptor
-                faceDescriptors[currentCapture] = Array.from(detections.descriptor);
-                document.getElementById(`face_data${currentCapture > 0 ? '_' + (currentCapture + 1) : ''}`).value = 
-                    JSON.stringify(faceDescriptors[currentCapture]);
+                // Face detected
+                qualityStatus.face = true;
+                faceGuide.classList.add('detected');
+                updateIndicator(faceIndicator, true);
                 
-                // Update photo preview
-                const photoItem = document.getElementById(`photo-${currentCapture + 1}`);
-                const img = photoItem.querySelector('img');
-                img.src = canvas.toDataURL('image/jpeg');
-                photoItem.classList.add('captured');
+                // Check face size (relative to image)
+                const faceBox = detections.detection.box;
+                const faceArea = faceBox.width * faceBox.height;
+                const imageArea = canvas.width * canvas.height;
+                const faceRatio = faceArea / imageArea;
                 
-                currentCapture++;
-                captureCount.textContent = currentCapture;
-                progressBar.style.width = `${(currentCapture / 3) * 100}%`;
+                qualityStatus.size = faceRatio > 0.1 && faceRatio < 0.6; // Face should be 10-60% of image
+                updateIndicator(sizeIndicator, qualityStatus.size);
                 
-                if (currentCapture < 3) {
-                    cameraStatus.textContent = 'Foto capturada! Prepare-se para a próxima';
-                    ativarCameraBtn.disabled = false;
-                } else {
-                    cameraStatus.textContent = 'Todas as fotos capturadas com sucesso!';
-                    ativarCameraBtn.textContent = 'CAPTURAS COMPLETAS';
-                    ativarCameraBtn.disabled = true;
+                // Check brightness
+                const brightness = calculateBrightness(canvas, faceBox);
+                qualityStatus.brightness = brightness > 50 && brightness < 200; // Good range
+                updateIndicator(brightnessIndicator, qualityStatus.brightness);
+                
+            } else {
+                // No face detected
+                qualityStatus.face = false;
+                faceGuide.classList.remove('detected');
+                updateIndicator(faceIndicator, false);
+                updateIndicator(sizeIndicator, false);
+                updateIndicator(brightnessIndicator, false);
+            }
+            
+            // Update button state and message
+            const allGood = qualityStatus.face && qualityStatus.brightness && qualityStatus.size;
+            ativarCameraBtn.disabled = !allGood;
+            
+            if (allGood) {
+                cameraStatus.textContent = '✓ Qualidade boa! Clique para capturar';
+                ativarCameraBtn.style.backgroundColor = '#28a745';
+            } else {
+                let issues = [];
+                if (!qualityStatus.face) issues.push('rosto não detectado');
+                if (!qualityStatus.brightness) issues.push('ajuste a iluminação');
+                if (!qualityStatus.size) issues.push('ajuste a distância');
+                
+                cameraStatus.textContent = 'Aguardando: ' + issues.join(', ');
+                ativarCameraBtn.style.backgroundColor = '#6c757d';
+            }
+            
+        } catch (error) {
+            console.error('Error during quality check:', error);
+        }
+    }
+    
+    function updateIndicator(indicator, isGood) {
+        indicator.className = 'quality-indicator ' + (isGood ? 'good' : 'bad');
+    }
+    
+    function calculateBrightness(canvas, faceBox) {
+        const imageData = ctx.getImageData(faceBox.x, faceBox.y, faceBox.width, faceBox.height);
+        const data = imageData.data;
+        let sum = 0;
+        
+        for (let i = 0; i < data.length; i += 4) {
+            // Calculate luminance using standard formula
+            sum += (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+        }
+        
+        return sum / (data.length / 4);
+    }
+    
+    async function capturePhoto() {
+        if (photoCaptured) return;
+        
+        // Stop real-time verification
+        clearInterval(verificationInterval);
+        
+        ativarCameraBtn.disabled = true;
+        cameraStatus.textContent = 'Capturando e verificando qualidade...';
+        
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        
+        // Draw video frame to canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        try {
+            // Final quality check
+            const detections = await faceapi
+                .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+            
+            if (detections) {
+                // Additional quality validation
+                const qualityCheck = await performFinalQualityCheck(detections);
+                
+                if (qualityCheck.passed) {
+                    // Save face descriptor (create 3 copies for backward compatibility)
+                    faceDescriptor = Array.from(detections.descriptor);
+                    document.getElementById('face_data').value = JSON.stringify(faceDescriptor);
+                    document.getElementById('face_data_2').value = JSON.stringify(faceDescriptor);
+                    document.getElementById('face_data_3').value = JSON.stringify(faceDescriptor);
+                    
+                    // Update photo preview
+                    const photoItem = document.getElementById('photo-1');
+                    const img = photoItem.querySelector('img');
+                    
+                    // Create high-quality image data
+                    const imageData = canvas.toDataURL('image/jpeg', 0.95);
+                    
+                    img.src = imageData;
+                    img.onload = function() {
+                        photoItem.style.display = 'block';
+                        console.log('High-quality photo captured and displayed');
+                    };
+                    
+                    // Update progress
+                    progressBar.style.width = '100%';
+                    photoCaptured = true;
+                    
+                    cameraStatus.textContent = '✓ Foto de alta qualidade capturada!';
+                    ativarCameraBtn.textContent = 'FOTO CAPTURADA ✓';
+                    ativarCameraBtn.style.backgroundColor = '#28a745';
                     
                     // Stop camera
                     if (stream) {
                         stream.getTracks().forEach(track => track.stop());
                     }
-                    video.style.display = 'none';
-                    canvas.style.display = 'block';
+                    
+                    // Hide camera container and indicators
+                    document.getElementById('video-container').style.display = 'none';
+                    document.getElementById('quality-indicators').style.display = 'none';
+                    
+                } else {
+                    cameraStatus.textContent = 'Qualidade insuficiente: ' + qualityCheck.reason;
+                    ativarCameraBtn.disabled = false;
+                    ativarCameraBtn.textContent = 'TENTAR NOVAMENTE';
+                    startRealTimeVerification(); // Restart verification
                 }
+                
             } else {
-                alert('Nenhum rosto detectado. Tente novamente.');
+                cameraStatus.textContent = 'Nenhum rosto detectado durante a captura. Tente novamente.';
                 ativarCameraBtn.disabled = false;
-                cameraStatus.textContent = 'Câmera ativada - Posicione seu rosto';
+                ativarCameraBtn.textContent = 'TENTAR NOVAMENTE';
+                startRealTimeVerification(); // Restart verification
             }
         } catch (error) {
-            console.error('Error during face detection:', error);
-            alert('Erro durante detecção facial');
+            console.error('Error during face capture:', error);
+            cameraStatus.textContent = 'Erro durante captura. Tente novamente.';
             ativarCameraBtn.disabled = false;
+            ativarCameraBtn.textContent = 'TENTAR NOVAMENTE';
+            startRealTimeVerification(); // Restart verification
         }
+    }
+    
+    async function performFinalQualityCheck(detections) {
+        const faceBox = detections.detection.box;
+        const faceArea = faceBox.width * faceBox.height;
+        const imageArea = canvas.width * canvas.height;
+        const faceRatio = faceArea / imageArea;
+        
+        // Check if face is properly sized
+        if (faceRatio < 0.1) {
+            return { passed: false, reason: 'rosto muito pequeno, aproxime-se da câmera' };
+        }
+        
+        if (faceRatio > 0.6) {
+            return { passed: false, reason: 'rosto muito próximo, afaste-se da câmera' };
+        }
+        
+        // Check brightness
+        const brightness = calculateBrightness(canvas, faceBox);
+        if (brightness < 50) {
+            return { passed: false, reason: 'imagem muito escura, melhore a iluminação' };
+        }
+        
+        if (brightness > 200) {
+            return { passed: false, reason: 'imagem muito clara, reduza a iluminação' };
+        }
+        
+        // Check if face is centered
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const faceCenterX = faceBox.x + faceBox.width / 2;
+        const faceCenterY = faceBox.y + faceBox.height / 2;
+        
+        const offsetX = Math.abs(faceCenterX - centerX);
+        const offsetY = Math.abs(faceCenterY - centerY);
+        
+        if (offsetX > canvas.width * 0.2 || offsetY > canvas.height * 0.2) {
+            return { passed: false, reason: 'centralize o rosto na câmera' };
+        }
+        
+        return { passed: true };
     }
     
     // Form validation
     document.getElementById('registration-form').addEventListener('submit', function(e) {
-        if (currentCapture < 3) {
+        if (!photoCaptured) {
             e.preventDefault();
-            alert('Por favor, capture todas as 3 fotos necessárias para o registro facial.');
+            alert('Por favor, capture sua foto para o registro facial.');
             return false;
         }
     });
     
+    // Real-time validation
+    document.getElementById('matricula').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '').substring(0, 9);
+    });
+    
+    document.getElementById('name').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^A-Za-zÀ-ÿ\s]/g, '');
+    });
+    
+    document.getElementById('email').addEventListener('blur', function(e) {
+        if (this.value && !this.value.endsWith('@edu.unifil.br')) {
+            if (!this.value.includes('@')) {
+                this.value += '@edu.unifil.br';
+            } else if (!this.value.endsWith('@edu.unifil.br')) {
+                this.setCustomValidity('Email deve terminar com @edu.unifil.br');
+            }
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
+        }
+        if (verificationInterval) {
+            clearInterval(verificationInterval);
         }
     });
 });
