@@ -5,7 +5,8 @@
       "Bash(pip install:*)",
       "Bash(php artisan:*)",
       "Bash(mysql:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(brew:*)"
     ],
     "deny": []
   }

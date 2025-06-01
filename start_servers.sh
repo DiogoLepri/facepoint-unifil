@@ -23,7 +23,7 @@ sleep 5
 
 # Start Laravel server in background
 echo "🌐 Starting Laravel server on http://localhost:8000..."
-php artisan serve --host=127.0.0.1 --port=8000 &
+/opt/homebrew/bin/php artisan serve --host=127.0.0.1 --port=8000 &
 LARAVEL_PID=$!
 
 echo ""
