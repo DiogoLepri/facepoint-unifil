@@ -15,12 +15,21 @@ class AttendanceRecord extends Model
         'user_id',
         'entry_time',
         'exit_time',
-        'status'
+        'status',
+        'justification',
+        'is_early',
+        'is_late',
+        'expected_time',
+        'minutes_difference',
+        'punch_type'
     ];
 
     protected $casts = [
         'entry_time' => 'datetime',
         'exit_time' => 'datetime',
+        'expected_time' => 'datetime',
+        'is_early' => 'boolean',
+        'is_late' => 'boolean',
     ];
 
     public function user()
