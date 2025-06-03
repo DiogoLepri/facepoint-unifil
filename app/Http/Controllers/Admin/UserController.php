@@ -40,18 +40,19 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'matricula' => 'required|string|max:20|unique:users',
             'curso' => 'required|string',
-            'role' => 'required|in:aluno,admin',
+            'role' => 'required|in:aluno',
             'password' => 'required|string|min:8|confirmed',
             'face_data' => 'nullable|string',
             'profile_image' => 'nullable|image|max:2048',
         ]);
         
+        // Force role to 'aluno' for security - admins can only be created via seeder
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'matricula' => $request->matricula,
             'curso' => $request->curso,
-            'role' => $request->role,
+            'role' => 'aluno',
             'password' => Hash::make($request->password),
         ]);
         
@@ -100,7 +101,16 @@ class UserController extends Controller
         $user->email = $request->email;
         $user->matricula = $request->matricula;
         $user->curso = $request->curso;
-        $user->role = $request->role;
+        
+        // Prevent changing existing admin role or creating new admins
+        if ($user->role !== 'admin' && $request->role === 'admin') {
+            return redirect()->back()->withErrors(['role' => 'Não é possível promover usuários para administrador via interface.']);
+        }
+        
+        // Only allow role change from admin to aluno, not the reverse
+        if ($user->role === 'admin' || $request->role === 'aluno') {
+            $user->role = $request->role;
+        }
         
         if ($request->password) {
             $user->password = Hash::make($request->password);

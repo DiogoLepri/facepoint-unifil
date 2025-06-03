@@ -134,10 +134,16 @@
 
                             <div class="mb-3">
                                 <label for="role" class="form-label">Tipo de Usuário</label>
-                                <select class="form-select @error('role') is-invalid @enderror" id="role" name="role" required>
-                                    <option value="aluno" {{ $user->role == 'aluno' ? 'selected' : '' }}>Aluno</option>
-                                    <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>Administrador</option>
-                                </select>
+                                @if($user->role == 'admin')
+                                    <input type="text" class="form-control" value="Administrador" disabled>
+                                    <input type="hidden" name="role" value="admin">
+                                    <small class="text-muted">Administradores não podem ter seu tipo alterado via interface.</small>
+                                @else
+                                    <select class="form-select @error('role') is-invalid @enderror" id="role" name="role" required>
+                                        <option value="aluno" {{ $user->role == 'aluno' ? 'selected' : '' }}>Aluno</option>
+                                    </select>
+                                    <small class="text-muted">Apenas alunos podem ter seu tipo alterado via interface.</small>
+                                @endif
                                 @error('role')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>

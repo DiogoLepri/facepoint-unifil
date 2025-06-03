@@ -123,8 +123,8 @@
                                 <label for="role" class="form-label">Tipo de Usuário</label>
                                 <select class="form-select @error('role') is-invalid @enderror" id="role" name="role" required>
                                     <option value="aluno">Aluno</option>
-                                    <option value="admin">Administrador</option>
                                 </select>
+                                <small class="text-muted">Apenas alunos podem ser criados via interface. Administradores são criados via sistema.</small>
                                 @error('role')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>

@@ -11,6 +11,11 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // Verificar se é admin
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            return redirect()->route('login')->with('error', 'Acesso não autorizado.');
+        }
+        
         // Contar usuários ativos
         $activeUsers = User::where('role', 'aluno')->count();
         
