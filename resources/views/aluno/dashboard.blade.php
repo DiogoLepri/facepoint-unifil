@@ -101,6 +101,99 @@
         color: #28a745;
     }
     
+    /* Modal melhorado */
+    .modal-content {
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    .modal-header {
+        border-bottom: none;
+        background: linear-gradient(135deg, #003366 0%, #004080 100%);
+        border-radius: 15px 15px 0 0;
+        padding: 25px;
+    }
+    .modal-body {
+        padding: 30px;
+    }
+    .modal-footer {
+        border-top: none;
+        padding: 20px 30px 30px;
+    }
+    
+    .current-time-large {
+        font-size: 3rem;
+        font-weight: bold;
+        color: #003366;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .punch-type-badge {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: bold;
+        display: inline-block;
+        margin-top: 10px;
+    }
+    
+    .info-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .info-item {
+        text-align: center;
+    }
+    
+    .info-value {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #003366;
+        margin-top: 5px;
+    }
+    
+    .time-alert {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        color: #856404;
+    }
+    
+    .time-alert.late {
+        background: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+    }
+    
+    .time-alert.early {
+        background: #d1ecf1;
+        border-color: #bee5eb;
+        color: #0c5460;
+    }
+    
+    .justification-card {
+        background: #fff;
+        border: 2px dashed #dc3545;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 15px;
+    }
+    
+    .justification-card h6 {
+        color: #dc3545;
+        margin-bottom: 15px;
+    }
+    
+    .confirmation-text p {
+        font-size: 1.1rem;
+        color: #495057;
+    }
+    
     /* Recent activity styles */
     .activity-table {
         background: white;
@@ -172,7 +265,6 @@
             </div>
             
             <div class="current-time" id="display-time">--:--:--</div>
-            <div class="next-punch" id="next-punch-info">{{ $nextRegister ?? 'Carregando...' }}</div>
             
             <div class="mt-4">
                 <button type="button" class="punch-btn" id="punch-clock-btn">
@@ -236,45 +328,73 @@
 
 <!-- Modal de Confirmação -->
 <div class="modal fade" id="punchConfirmModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmar Registro de Ponto</h5>
+            <div class="modal-header text-center">
+                <div class="w-100">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <h4 class="modal-title mb-0">Registro de Ponto</h4>
+                </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="text-center mb-3">
-                    <div class="current-time" id="modal-current-time">--:--</div>
-                    <div id="modal-punch-type">Entrada</div>
+                <!-- Horário Atual -->
+                <div class="text-center mb-4">
+                    <div class="current-time-large" id="modal-current-time">--:--</div>
+                    <div class="punch-type-badge" id="modal-punch-type">Entrada</div>
                 </div>
                 
-                <div class="time-difference" id="time-difference-info" style="display: none;">
-                    <!-- Será preenchido dinamicamente -->
-                </div>
-                
-                <div class="alert alert-info">
-                    <strong>Horário Esperado:</strong> <span id="expected-time">--:--</span><br>
-                    <strong>Tipo:</strong> <span id="punch-type-text">Entrada</span>
-                </div>
-                
-                <div id="justification-section" style="display: none;">
-                    <div class="mb-3">
-                        <label for="justification" class="form-label">
-                            <strong>Justificativa (obrigatória):</strong>
-                        </label>
-                        <textarea class="form-control" id="justification" rows="3" 
-                                placeholder="Explique o motivo do horário irregular..."></textarea>
-                        <div class="form-text">Esta justificativa será enviada ao administrador.</div>
+                <!-- Card de Informações -->
+                <div class="info-card mb-3">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="info-item">
+                                <small class="text-muted">Horário Esperado</small>
+                                <div class="info-value" id="expected-time">--:--</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="info-item">
+                                <small class="text-muted">Tipo de Registro</small>
+                                <div class="info-value" id="punch-type-text">Entrada</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="text-center">
-                    <p>Deseja confirmar o registro de ponto?</p>
+                <!-- Alerta de Diferença de Tempo -->
+                <div class="time-alert" id="time-difference-info" style="display: none;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <div>
+                            <strong id="time-difference-text"></strong>
+                            <br><small id="time-difference-detail"></small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Seção de Justificativa -->
+                <div id="justification-section" style="display: none;">
+                    <div class="justification-card">
+                        <h6><i class="fas fa-edit me-2"></i>Justificativa Obrigatória</h6>
+                        <textarea class="form-control" id="justification" rows="3" 
+                                placeholder="Explique o motivo do registro fora do horário padrão..."></textarea>
+                        <small class="text-muted mt-1 d-block">Esta informação será enviada ao administrador.</small>
+                    </div>
+                </div>
+                
+                <!-- Confirmação -->
+                <div class="confirmation-text text-center mt-3">
+                    <p class="mb-0">Confirmar registro de ponto?</p>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="confirm-punch-btn">Confirmar</button>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary px-4" id="confirm-punch-btn">
+                    <i class="fas fa-check me-1"></i>Confirmar
+                </button>
             </div>
         </div>
     </div>
@@ -391,15 +511,31 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mostrar diferença de tempo
         const timeDiffElement = document.getElementById('time-difference-info');
+        const timeDiffText = document.getElementById('time-difference-text');
+        const timeDiffDetail = document.getElementById('time-difference-detail');
         const isEarly = data.current_time < data.expected_time;
         const isLate = data.current_time > data.expected_time;
         
+        // Converter minutos para formato legível
+        const totalMinutes = Math.floor(data.minutes_difference);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        
+        let timeText = '';
+        if (hours > 0) {
+            timeText = `${hours}h ${minutes}min`;
+        } else {
+            timeText = `${minutes} minutos`;
+        }
+        
         if (isEarly) {
-            timeDiffElement.textContent = `Você está ${data.minutes_difference} minutos adiantado`;
-            timeDiffElement.className = 'time-difference early';
+            timeDiffText.textContent = `Você está ${timeText} adiantado`;
+            timeDiffDetail.textContent = `Horário esperado: ${data.expected_time} | Horário atual: ${data.current_time}`;
+            timeDiffElement.className = 'time-alert early';
         } else if (isLate) {
-            timeDiffElement.textContent = `Você está ${data.minutes_difference} minutos atrasado`;
-            timeDiffElement.className = 'time-difference late';
+            timeDiffText.textContent = `Você está ${timeText} atrasado`;
+            timeDiffDetail.textContent = `Horário esperado: ${data.expected_time} | Horário atual: ${data.current_time}`;
+            timeDiffElement.className = 'time-alert late';
         }
         
         timeDiffElement.style.display = 'block';
