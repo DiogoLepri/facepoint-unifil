@@ -219,13 +219,7 @@
                 <a class="nav-link active" href="{{ route('dashboard') }}">Início</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ route('attendance.create') }}">Registrar Ponto</a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link" href="{{ route('attendance.history') }}">Histórico</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('profile') }}">Perfil</a>
             </li>
         </ul>
     </div>
@@ -236,7 +230,7 @@
     <div class="col-md-4">
         <div class="stat-card">
             <div class="stat-number">{{ $hoursRegistered ?? '0h' }}</div>
-            <div class="stat-label">Horas Trabalhadas (Este Mês)</div>
+            <div class="stat-label">Horas no NPI (Este Mês)</div>
         </div>
     </div>
     <div class="col-md-4">
@@ -260,7 +254,7 @@
             <h5 class="mb-3">Registro de Ponto</h5>
             
             <div class="work-hours">
-                <strong>Horário de Trabalho:</strong><br>
+                <strong>Horário do NPI:</strong><br>
                 <span class="text-primary">14:00 às 18:00</span> (Segunda a Sexta)
             </div>
             

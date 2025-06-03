@@ -432,7 +432,13 @@ class AttendanceController extends Controller
             $horas = floor($totalMinutos / 60);
             $minutos = $totalMinutos % 60;
             
-            return $horas . 'h' . ($minutos > 0 ? sprintf('%02d', $minutos) : '');
+            if ($horas > 0 && $minutos > 0) {
+                return $horas . 'h ' . sprintf('%02d', $minutos) . 'min';
+            } elseif ($horas > 0) {
+                return $horas . 'h';
+            } else {
+                return $minutos . 'min';
+            }
         } catch (\Exception $e) {
             \Log::error('Erro ao calcular horas: ' . $e->getMessage());
             return '0h';
