@@ -1,0 +1,414 @@
+================================================================================
+                        FACEPOINT UNIFIL - PROJECT OVERVIEW
+                   Sistema de Ponto Eletrônico com Reconhecimento Facial
+================================================================================
+
+AUTOR: Diogo Lepri
+INSTITUIÇÃO: Centro Universitário Filadélfia (UniFil)
+CURSO: Ciência da Computação / Engenharia de Software
+PERÍODO: Estágio 2025
+
+================================================================================
+1. VISÃO GERAL DO PROJETO
+================================================================================
+
+O FacePoint UniFil é um sistema moderno de controle de ponto desenvolvido 
+especificamente para estudantes dos cursos de Ciência da Computação e 
+Engenharia de Software da UniFil. O sistema combina tecnologias tradicionais 
+de autenticação (email/senha) com reconhecimento facial avançado usando 
+inteligência artificial.
+
+PRINCIPAIS CARACTERÍSTICAS:
+• Sistema web responsivo desenvolvido em Laravel 12
+• Autenticação dupla: Email/senha + Reconhecimento facial
+• Controle de ponto inteligente com horários pré-definidos
+• Interface administrativa completa
+• Relatórios e histórico de frequência
+• Integração com DeepFace (Python) para reconhecimento facial
+
+================================================================================
+2. ARQUITETURA TECNOLÓGICA
+================================================================================
+
+BACKEND (PHP/Laravel):
+• Framework: Laravel 12 (PHP 8.2+)
+• Banco de Dados: SQLite (desenvolvimento)
+• Autenticação: Laravel Sanctum
+• ORM: Eloquent
+• Middleware: Personalizado para controle de acesso
+
+FRONTEND:
+• Blade Templates (Laravel)
+• Bootstrap 5
+• JavaScript (Vanilla)
+• CSS personalizado com gradientes UniFil
+
+INTELIGÊNCIA ARTIFICIAL:
+• Python 3.x
+• DeepFace (Facebook AI)
+• OpenCV para processamento de imagens
+• Modelo: Facenet512
+• Flask API para comunicação com Laravel
+
+SERVIDOR PYTHON:
+• API REST em Flask
+• Processamento de imagens em tempo real
+• Banco de faces local (face_database/)
+• Sistema MITM Proxy integrado (funcionalidade avançada)
+
+================================================================================
+3. FUNCIONALIDADES PRINCIPAIS
+================================================================================
+
+3.1 SISTEMA DE AUTENTICAÇÃO
+----------------------------
+TIPOS DE LOGIN:
+• Email/Senha: Acesso completo a todas as funcionalidades
+• Reconhecimento Facial: Acesso limitado por segurança
+
+FLUXO DE CADASTRO:
+1. Validação de email (@edu.unifil.br obrigatório)
+2. Validação de matrícula (9 dígitos numéricos)
+3. Captura de 3 imagens faciais para treinamento
+4. Geração de descritores faciais únicos
+5. Armazenamento seguro no banco de dados
+
+SEGURANÇA:
+• Verificação de email institucional
+• Senhas criptografadas (Hash)
+• Descritores faciais armazenados como arrays JSON
+• Threshold de confiança configurável (padrão: 75%)
+
+3.2 CONTROLE DE PONTO INTELIGENTE
+---------------------------------
+HORÁRIOS PADRÃO:
+• Entrada: 14:00h
+• Saída: 18:00h
+• Dias úteis: Segunda a Sexta
+• Tolerância: 15 minutos
+
+FUNCIONALIDADES AVANÇADAS:
+• Detecção automática de horários irregulares
+• Sistema de justificativas obrigatórias
+• Cálculo automático de horas trabalhadas
+• Percentual de frequência mensal
+• Bloqueio de registros duplicados
+
+TIPOS DE REGISTRO:
+• Manual: Via dashboard do aluno
+• Facial: Via reconhecimento automático
+• Ambos registram entrada/saída automaticamente
+
+3.3 RECONHECIMENTO FACIAL
+-------------------------
+TECNOLOGIA:
+• Modelo: Facenet512 (512 dimensões)
+• Métrica: Distância Euclidiana
+• Threshold: 0.4 (configurável)
+• Precisão: ~95% em condições ideais
+
+PROCESSO:
+1. Captura de imagem via webcam
+2. Detecção de face (OpenCV)
+3. Extração de características (DeepFace)
+4. Comparação com banco de faces
+5. Cálculo de confiança
+6. Confirmação/Rejeição do usuário
+
+SEGURANÇA:
+• Múltiplas imagens por usuário (3)
+• Verificação de distância euclidiana
+• Logs detalhados de tentativas
+• Sistema de confirmação manual
+
+================================================================================
+4. ESTRUTURA DO BANCO DE DADOS
+================================================================================
+
+4.1 TABELA USERS
+----------------
+• id (Primary Key)
+• name (Nome completo)
+• email (Email institucional @edu.unifil.br)
+• matricula (9 dígitos únicos)
+• curso (Ciência da Computação | Engenharia de Software)
+• password (Hash da senha)
+• role (aluno | admin)
+• last_login_type (email | facial)
+• last_login_at (Timestamp do último login)
+
+4.2 TABELA RECOGNITION_RECORDS
+------------------------------
+• id (Primary Key)
+• user_id (Foreign Key → users.id)
+• face_descriptor (Array JSON com 512 dimensões)
+• capture_type (registration_1, registration_2, registration_3, confirmed_login)
+• created_at/updated_at
+
+4.3 TABELA ATTENDANCE_RECORDS
+-----------------------------
+• id (Primary Key)
+• user_id (Foreign Key → users.id)
+• entry_time (Timestamp de entrada)
+• exit_time (Timestamp de saída)
+• status (registered, absent)
+• punch_type (entry | exit)
+• expected_time (Horário esperado)
+• minutes_difference (Diferença em minutos)
+• is_early (Boolean)
+• is_late (Boolean)
+• justification (Texto livre)
+
+================================================================================
+5. FLUXOS DE USUÁRIO PRINCIPAIS
+================================================================================
+
+5.1 FLUXO DE CADASTRO
+--------------------
+1. Acesso à página de registro
+2. Preenchimento de dados pessoais
+3. Validação de email institucional
+4. Validação de matrícula única
+5. Configuração de senha
+6. Captura de 3 fotos faciais
+7. Processamento das imagens (DeepFace)
+8. Geração de descritores faciais
+9. Armazenamento no banco
+10. Login automático
+
+5.2 FLUXO DE LOGIN TRADICIONAL
+------------------------------
+1. Entrada de email/senha
+2. Validação das credenciais
+3. Atualização do last_login_type = 'email'
+4. Redirecionamento para dashboard
+5. Acesso completo às funcionalidades
+
+5.3 FLUXO DE LOGIN FACIAL
+-------------------------
+1. Captura de imagem via webcam
+2. Envio para API Python (DeepFace)
+3. Processamento e comparação
+4. Retorno de usuário candidato
+5. Apresentação para confirmação
+6. Confirmação/Rejeição pelo usuário
+7. Login automático se confirmado
+8. Atualização do last_login_type = 'facial'
+
+5.4 FLUXO DE REGISTRO DE PONTO
+------------------------------
+1. Verificação de dia útil
+2. Determinação do tipo (entrada/saída)
+3. Cálculo de diferença de horário
+4. Verificação de necessidade de justificativa
+5. Solicitação de justificativa se necessário
+6. Registro no banco de dados
+7. Atualização das estatísticas
+
+================================================================================
+6. PAINEL ADMINISTRATIVO
+================================================================================
+
+FUNCIONALIDADES:
+• Dashboard com estatísticas gerais
+• Gerenciamento de usuários (CRUD)
+• Visualização de relatórios de frequência
+• Exportação de dados
+• Configurações do sistema
+
+ACESSO:
+• Usuário: joao.andrade@unifil.br
+• Senha: Admin@2025!UniFil
+• Role: admin (definido no seeder)
+
+RECURSOS:
+• Listagem de todos os usuários
+• Edição de dados de usuários
+• Geração de relatórios por período
+• Estatísticas de uso do sistema
+• Logs de atividades
+
+================================================================================
+7. CONFIGURAÇÕES TÉCNICAS
+================================================================================
+
+7.1 AMBIENTE DE DESENVOLVIMENTO
+-------------------------------
+• PHP 8.2+
+• Composer para dependências PHP
+• Python 3.x para DeepFace
+• SQLite para banco local
+• NPM para dependências frontend
+
+7.2 SERVIDORES
+--------------
+• Laravel: php artisan serve (porta 8000)
+• DeepFace API: python deepface_server.py (porta 5001)
+• Scripts de inicialização: start_servers.sh
+
+7.3 CONFIGURAÇÕES DEEPFACE
+---------------------------
+Arquivo: config/deepface.php
+• API URL: http://localhost:5001
+• Timeout: 30 segundos
+• Confidence Threshold: 75%
+• Recognition Threshold: 0.4
+• Modelo: Facenet512
+• Detector: OpenCV
+
+================================================================================
+8. SEGURANÇA E COMPLIANCE
+================================================================================
+
+8.1 PROTEÇÕES IMPLEMENTADAS
+---------------------------
+• Validação de email institucional obrigatória
+• Criptografia de senhas (bcrypt)
+• Proteção CSRF em formulários
+• Middleware de autenticação
+• Controle de acesso por role
+• Logs detalhados de tentativas de login
+
+8.2 DADOS BIOMÉTRICOS
+---------------------
+• Descritores faciais (não imagens originais)
+• Armazenamento criptografado
+• Sem exposição de dados sensíveis
+• Conformidade com LGPD
+
+8.3 AUDITORIA
+-------------
+• Logs de todas as tentativas de reconhecimento
+• Histórico de registros de ponto
+• Tracking de tipos de login
+• Justificativas para horários irregulares
+
+================================================================================
+9. MÉTRICAS E ESTATÍSTICAS
+================================================================================
+
+9.1 DASHBOARD DO ALUNO
+----------------------
+• Horas registradas no mês atual
+• Percentual de frequência mensal
+• Próximo horário de registro
+• Histórico dos últimos 10 registros
+• Status atual (entrada/saída pendente)
+
+9.2 CÁLCULOS AUTOMÁTICOS
+------------------------
+• Dias úteis no mês
+• Total de horas trabalhadas
+• Média de pontualidade
+• Frequência de uso do sistema
+• Estatísticas de reconhecimento facial
+
+================================================================================
+10. DEPLOYMENT E MANUTENÇÃO
+================================================================================
+
+10.1 ESTRUTURA DE ARQUIVOS
+--------------------------
+• /app - Código Laravel (Controllers, Models, Services)
+• /resources - Views Blade e assets
+• /database - Migrations, seeders, SQLite
+• /public - Assets públicos e modelos JS
+• /face_database - Banco de faces Python
+• deepface_server.py - Servidor de IA
+• requirements.txt - Dependências Python
+
+10.2 COMANDOS IMPORTANTES
+------------------------
+• php artisan migrate - Executar migrations
+• php artisan db:seed - Popular dados iniciais
+• php artisan serve - Iniciar servidor Laravel
+• python deepface_server.py - Iniciar servidor IA
+• ./start_servers.sh - Iniciar ambos os servidores
+
+10.3 MONITORAMENTO
+------------------
+• Logs Laravel: storage/logs/
+• Logs DeepFace: mitm_intercepted.log
+• Health check: /health endpoint
+• Status da API: /api/attendance/status
+
+================================================================================
+11. FUNCIONALIDADES FUTURAS (ROADMAP)
+================================================================================
+
+• Integração com Active Directory UniFil
+• Notificações push para mobile
+• App mobile nativo
+• Relatórios avançados com gráficos
+• Integração com sistemas acadêmicos
+• Reconhecimento facial em múltiplas câmeras
+• Sistema de badges e gamificação
+• Integração com controle de acesso físico
+
+================================================================================
+12. TROUBLESHOOTING COMUM
+================================================================================
+
+12.1 PROBLEMAS DE RECONHECIMENTO FACIAL
+---------------------------------------
+• Verificar se deepface_server.py está rodando
+• Confirmar conectividade na porta 5001
+• Verificar qualidade da iluminação
+• Recalibrar se necessário com novas fotos
+
+12.2 PROBLEMAS DE BANCO DE DADOS
+--------------------------------
+• Executar php artisan migrate:fresh
+• Rodar php artisan db:seed
+• Verificar permissões do arquivo SQLite
+
+12.3 PROBLEMAS DE AUTENTICAÇÃO
+------------------------------
+• Limpar cache: php artisan cache:clear
+• Verificar configurações de sessão
+• Confirmar middleware aplicado corretamente
+
+================================================================================
+13. CONCLUSÃO
+================================================================================
+
+O FacePoint UniFil representa uma solução moderna e completa para controle 
+de frequência acadêmica, integrando tecnologias de ponta como reconhecimento 
+facial com a robustez de um sistema web tradicional. 
+
+O projeto demonstra a aplicação prática de conceitos de:
+• Desenvolvimento web full-stack
+• Inteligência artificial aplicada
+• Segurança da informação
+• Experiência do usuário (UX)
+• Arquitetura de sistemas distribuídos
+
+PONTOS FORTES:
+✓ Interface intuitiva e responsiva
+✓ Integração AI funcionalmente robusta
+✓ Sistema de segurança multicamadas
+✓ Código bem estruturado e documentado
+✓ Conformidade com padrões acadêmicos
+
+IMPACTO ESPERADO:
+• Modernização do controle de frequência
+• Redução de fraudes em registros
+• Melhoria da experiência do estudante
+• Dados precisos para análises acadêmicas
+• Base para futuras integrações tecnológicas
+
+================================================================================
+CONTATO E SUPORTE
+================================================================================
+
+Desenvolvedor: Diogo Lepri
+Email: diogo.lepri@edu.unifil.br
+Instituição: Centro Universitário Filadélfia (UniFil)
+Supervisor: João Andrade (joao.andrade@unifil.br)
+
+Para suporte técnico, consulte os logs do sistema ou entre em contato com
+a equipe de desenvolvimento.
+
+================================================================================
+FIM DO DOCUMENTO - VERSÃO 1.0 - JUNHO 2025
+================================================================================

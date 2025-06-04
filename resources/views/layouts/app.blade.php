@@ -56,10 +56,15 @@
             <div class="navbar-text text-white me-3">
                 Olá, {{ Auth::user()->name }}!
             </div>
-            <div>
+            <div class="d-flex gap-2">
+                <a href="{{ route('dashboard') }}" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-home me-1"></i>Dashboard
+                </a>
                 <form action="{{ route('logout') }}" method="POST" class="d-inline">
                     @csrf
-                    <button type="submit" class="btn btn-sm btn-light">Sair</button>
+                    <button type="submit" class="btn btn-sm btn-light">
+                        <i class="fas fa-sign-out-alt me-1"></i>Sair
+                    </button>
                 </form>
             </div>
             @endauth

@@ -35,6 +35,12 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
+            
+            // Update user's last login type and time
+            Auth::user()->update([
+                'last_login_type' => 'email',
+                'last_login_at' => now(),
+            ]);
 
             if (Auth::user()->role === 'admin') {
                 return redirect()->route('admin.dashboard');
@@ -336,6 +342,12 @@ class AuthController extends Controller
             
             // Log the user in
             Auth::login($user);
+            
+            // Update user's last login type and time
+            $user->update([
+                'last_login_type' => 'facial',
+                'last_login_at' => now(),
+            ]);
             
             // Record successful recognition for analytics
             try {

@@ -53,7 +53,7 @@ Route::middleware(['auth'])->group(function () {
     // Registros de ponto
     Route::get('/attendance/create', [AttendanceController::class, 'create'])->name('attendance.create');
     Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
-    Route::get('/attendance/history', [AttendanceController::class, 'history'])->name('attendance.history');
+    Route::get('/attendance/history', [AttendanceController::class, 'history'])->name('attendance.history')->middleware(\App\Http\Middleware\CheckEmailLogin::class);
 });
 
 // Rotas administrativas (temporariamente sem middleware para teste)

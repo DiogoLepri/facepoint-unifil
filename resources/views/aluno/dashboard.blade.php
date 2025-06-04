@@ -125,16 +125,21 @@
             <li class="nav-item">
                 <a class="nav-link active" href="{{ route('dashboard') }}">Início</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('attendance.create') }}">Registrar Ponto</a>
-            </li>
+            @if(Auth::user()->last_login_type === 'email')
             <li class="nav-item">
                 <a class="nav-link" href="{{ route('attendance.history') }}">Histórico</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('profile') }}">Perfil</a>
-            </li>
+            @endif
         </ul>
+        
+        @if(Auth::user()->last_login_type === 'facial')
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            <div>
+                <strong>Login via Reconhecimento Facial</strong> - Algumas funcionalidades como o histórico estão disponíveis apenas para login com email e senha.
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 
