@@ -7,7 +7,8 @@
       "Bash(mysql:*)",
       "Bash(rm:*)",
       "Bash(brew:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

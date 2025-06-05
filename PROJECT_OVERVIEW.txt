@@ -54,7 +54,6 @@ SERVIDOR PYTHON:
 • API REST em Flask
 • Processamento de imagens em tempo real
 • Banco de faces local (face_database/)
-• Sistema MITM Proxy integrado (funcionalidade avançada)
 
 ================================================================================
 3. FUNCIONALIDADES PRINCIPAIS
@@ -328,7 +327,6 @@ Arquivo: config/deepface.php
 10.3 MONITORAMENTO
 ------------------
 • Logs Laravel: storage/logs/
-• Logs DeepFace: mitm_intercepted.log
 • Health check: /health endpoint
 • Status da API: /api/attendance/status
 
