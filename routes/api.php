@@ -48,20 +48,18 @@ Route::prefix('deepface')->group(function () {
     });
     
     // Test endpoint for image validation
-    Route::post('/validate-image', function (Request $request) {
-        $request->validate([
-            'image_data' => 'required|string'
-        ]);
-        
-        $deepFaceService = new DeepFaceService();
-        $isValid = $deepFaceService->validateImageData($request->image_data);
-        
-        return response()->json([
-            'success' => true,
-            'valid' => $isValid,
-            'message' => $isValid ? 'Image data is valid' : 'Invalid image data'
-        ]);
-    });
+    // Route::post('/validate-image', function (Request $request) {
+    //     $request->validate([
+    //         'image_data' => 'required|string'
+    //     ]);
+    //     $deepFaceService = new DeepFaceService();
+    //     $isValid = $deepFaceService->validateImageData($request->image_data);
+    //     return response()->json([
+    //         'success' => true,
+    //         'valid' => $isValid,
+    //         'message' => $isValid ? 'Image data is valid' : 'Invalid image data'
+    //     ]);
+    // });
 });
 
 // Legacy attendance API routes (maintained for backwards compatibility)

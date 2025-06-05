@@ -75,13 +75,13 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
 });
 
 // Test routes for debugging
-Route::get('/test-api', function() {
-    return response()->json(['status' => 'working']);
-});
-
-Route::post('/test-endpoint', function () {
-    return response()->json(['success' => true, 'message' => 'Test endpoint works!']);
-});
+// Route::get('/test-api', function() {
+//     return response()->json(['status' => 'working']);
+// });
+//
+// Route::post('/test-endpoint', function () {
+//     return response()->json(['success' => true, 'message' => 'Test endpoint works!']);
+// });
 
 Route::post('/register-attendance-dashboard', [App\Http\Controllers\AttendanceController::class, 'registerFromDashboard'])->name('attendance.register.dashboard');
 
