@@ -11,7 +11,7 @@
     }
     
     .navbar {
-        background-color: #003366 !important;
+        background-color: #f08223 !important;
     }
     
     .navbar-brand {
@@ -43,7 +43,7 @@
     }
     
     .system-title {
-        color: #003366;
+        color: #f08223;
         font-size: 1.8rem;
         font-weight: 600;
         margin-bottom: 0.5rem;
@@ -69,7 +69,7 @@
     }
     
     .login-card h5 {
-        color: #003366;
+        color: #f08223;
         font-weight: 600;
         margin-bottom: 25px;
     }
@@ -88,12 +88,12 @@
     }
     
     .form-control:focus {
-        border-color: #003366;
-        box-shadow: 0 0 0 0.2rem rgba(0, 51, 102, 0.25);
+        border-color: #f08223;
+        box-shadow: 0 0 0 0.2rem rgba(240, 130, 35, 0.25);
     }
     
     .btn-primary {
-        background-color: #003366;
+        background-color: #f08223;
         border: none;
         padding: 12px;
         font-weight: 600;
@@ -104,11 +104,11 @@
     }
     
     .btn-primary:hover {
-        background-color: #002244;
+        background-color: #e6751e;
     }
     
     .btn-warning {
-        background-color: #FFA500;
+        background-color: #f08223;
         border: none;
         color: white;
         padding: 12px;
@@ -120,7 +120,7 @@
     }
     
     .btn-warning:hover {
-        background-color: #FF8C00;
+        background-color: #e6751e;
         color: white;
     }
     
@@ -173,7 +173,7 @@
     }
     
     .cadastre-link {
-        color: #003366;
+        color: #f08223;
         text-decoration: none;
         font-weight: 500;
     }
@@ -253,7 +253,7 @@
     }
     
     .confirmation-content h3 {
-        color: #003366;
+        color: #f08223;
         margin-bottom: 20px;
         font-weight: 600;
     }
@@ -265,7 +265,7 @@
     }
     
     .user-name {
-        color: #003366;
+        color: #f08223;
         font-weight: bold;
         font-size: 1.3rem;
     }
@@ -379,11 +379,8 @@
                 
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary">
-                        ENTRAR COMO ALUNO
+                        ENTRAR
                     </button>
-                    <a href="{{ route('admin.login') }}" class="btn btn-warning">
-                        ENTRAR COMO ADMINISTRADOR
-                    </a>
                 </div>
                 
                 <div class="text-center mt-3">

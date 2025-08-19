@@ -6,8 +6,8 @@
 <style>
     .nav-pills .nav-link.active {
         background-color: transparent;
-        color: #003366;
-        border-bottom: 3px solid #003366;
+        color: #f08223;
+        border-bottom: 3px solid #f08223;
         border-radius: 0;
     }
     .nav-pills .nav-link {
@@ -30,16 +30,10 @@
                 <a class="nav-link" href="{{ route('admin.dashboard') }}">Início</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ route('admin.reports') }}">Relatórios</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('users.index') }}">Alunos</a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link active" href="{{ route('admin.reports') }}">Relatórios</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ route('admin.config') }}">Configurações</a>
+                <a class="nav-link" href="{{ route('users.index') }}">Alunos</a>
             </li>
         </ul>
     </div>
@@ -79,9 +73,18 @@
                                 <label for="filter_by" class="form-label">Filtrar por Curso</label>
                                 <select class="form-select" id="filter_by" name="filter_by">
                                     <option value="">Todos os cursos</option>
-                                    <option value="si">Sistemas de Informação</option>
                                     <option value="cc">Ciência da Computação</option>
                                     <option value="eng">Engenharia de Software</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3" id="user_selection" style="display: none;">
+                                <label for="user_id" class="form-label">Selecionar Usuário</label>
+                                <select class="form-select" id="user_id" name="user_id">
+                                    <option value="">Selecione um usuário</option>
+                                    @foreach($users as $user)
+                                        <option value="{{ $user->id }}">{{ $user->name }} - {{ $user->email }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             
@@ -89,31 +92,50 @@
                                 <label for="format" class="form-label">Formato de Saída</label>
                                 <div class="d-flex">
                                     <div class="form-check me-3">
-                                        <input class="form-check-input" type="radio" name="format" id="format_pdf" value="pdf" checked>
+                                        <input class="form-check-input" type="radio" name="format" id="format_pdf" value="pdf" checked readonly>
                                         <label class="form-check-label" for="format_pdf">PDF</label>
                                     </div>
-                                    <div class="form-check me-3">
-                                        <input class="form-check-input" type="radio" name="format" id="format_excel" value="excel">
-                                        <label class="form-check-label" for="format_excel">Excel</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="format" id="format_csv" value="csv">
-                                        <label class="form-check-label" for="format_csv">CSV</label>
-                                    </div>
                                 </div>
+                                <small class="text-muted">Relatórios são gerados apenas em formato PDF</small>
                             </div>
                         </div>
                     </div>
                     
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end btn-group-reports">
-                        <button type="submit" class="btn btn-primary">RELATÓRIO DIÁRIO</button>
-                        <button type="submit" class="btn btn-warning">RELATÓRIO SEMANAL</button>
-                        <button type="submit" class="btn btn-info">RELATÓRIO MENSAL</button>
-                        <a href="{{ route('admin.reports.export') }}" class="btn btn-success">EXPORTAR DADOS</a>
+                        <button type="submit" name="report_period" value="daily" class="btn btn-primary">RELATÓRIO DIÁRIO</button>
+                        <button type="submit" name="report_period" value="weekly" class="btn btn-warning">RELATÓRIO SEMANAL</button>
+                        <button type="submit" name="report_period" value="monthly" class="btn btn-info">RELATÓRIO MENSAL</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const reportTypeSelect = document.getElementById('report_type');
+    const userSelectionDiv = document.getElementById('user_selection');
+    const userSelect = document.getElementById('user_id');
+    
+    function toggleUserSelection() {
+        if (reportTypeSelect.value === 'user') {
+            userSelectionDiv.style.display = 'block';
+            userSelect.required = true;
+        } else {
+            userSelectionDiv.style.display = 'none';
+            userSelect.required = false;
+            userSelect.value = '';
+        }
+    }
+    
+    // Executar na inicialização
+    toggleUserSelection();
+    
+    // Executar quando mudar o tipo de relatório
+    reportTypeSelect.addEventListener('change', toggleUserSelection);
+});
+</script>
 @endsection

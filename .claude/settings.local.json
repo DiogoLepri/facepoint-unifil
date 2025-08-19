@@ -8,8 +8,14 @@
       "Bash(rm:*)",
       "Bash(brew:*)",
       "Bash(ls:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(php:*)",
+      "Bash(composer:*)",
+      "Bash(kill:*)",
+      "Bash(curl:*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }

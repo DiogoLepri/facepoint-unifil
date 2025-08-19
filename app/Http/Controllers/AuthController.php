@@ -33,6 +33,8 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
+        \Log::info('Login attempt', ['email' => $credentials['email']]);
+
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
             
@@ -48,6 +50,8 @@ class AuthController extends Controller
 
             return redirect()->intended('dashboard');
         }
+
+        \Log::warning('Login failed', ['email' => $credentials['email']]);
 
         return back()->withErrors([
             'email' => 'As credenciais fornecidas não correspondem aos nossos registros.',

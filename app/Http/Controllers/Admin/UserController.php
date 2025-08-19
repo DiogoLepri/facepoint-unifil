@@ -28,47 +28,6 @@ class UserController extends Controller
         return view('admin.users.index', compact('users'));
     }
     
-    public function create()
-    {
-        return view('admin.users.create');
-    }
-    
-    public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'matricula' => 'required|string|max:20|unique:users',
-            'curso' => 'required|string',
-            'role' => 'required|in:aluno',
-            'password' => 'required|string|min:8|confirmed',
-            'face_data' => 'nullable|string',
-            'profile_image' => 'nullable|image|max:2048',
-        ]);
-        
-        // Force role to 'aluno' for security - admins can only be created via seeder
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'matricula' => $request->matricula,
-            'curso' => $request->curso,
-            'role' => 'aluno',
-            'password' => Hash::make($request->password),
-        ]);
-        
-        // Processar imagem facial
-        if ($request->face_data) {
-            $this->processFacialData($request->face_data, $request->face_descriptor, $user->id);
-        } 
-        // Ou processar imagem de perfil
-        else if ($request->hasFile('profile_image')) {
-            $path = $request->file('profile_image')->store('users', 'public');
-            $user->profile_image = $path;
-            $user->save();
-        }
-        
-        return redirect()->route('users.index')->with('success', 'Usuário criado com sucesso!');
-    }
     
     public function show($id)
     {

@@ -176,24 +176,25 @@ class AttendanceController extends Controller
     
     public function status(Request $request)
     {
-        if (!Auth::check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Usuário não autenticado'
-            ]);
-        }
-        
-        $user = Auth::user();
-        $now = Carbon::now();
-        
-        // Verificar se é dia útil
-        if ($now->isWeekend()) {
-            return response()->json([
-                'success' => true,
-                'is_weekend' => true,
-                'message' => 'Hoje é fim de semana. Registros não são necessários.'
-            ]);
-        }
+        try {
+            if (!Auth::check()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuário não autenticado'
+                ], 401);
+            }
+            
+            $user = Auth::user();
+            $now = Carbon::now();
+            
+            // Verificar se é dia útil
+            if ($now->isWeekend()) {
+                return response()->json([
+                    'success' => true,
+                    'is_weekend' => true,
+                    'message' => 'Hoje é fim de semana. Registros não são necessários.'
+                ]);
+            }
         
         // Obter registro de hoje
         $today = $now->format('Y-m-d');
@@ -205,20 +206,28 @@ class AttendanceController extends Controller
         $expectedTime = $nextPunchType === 'entry' ? self::ENTRY_TIME : self::EXIT_TIME;
         
         return response()->json([
-            'success' => true,
-            'today_record' => $todayRecord ? [
-                'entry_time' => $todayRecord->entry_time?->format('H:i'),
-                'exit_time' => $todayRecord->exit_time?->format('H:i'),
-                'has_justification' => !empty($todayRecord->justification)
-            ] : null,
-            'next_punch_type' => $nextPunchType,
-            'expected_time' => $expectedTime,
-            'current_time' => $now->format('H:i'),
-            'work_hours' => [
-                'entry' => self::ENTRY_TIME,
-                'exit' => self::EXIT_TIME
-            ]
-        ]);
+                'success' => true,
+                'today_record' => $todayRecord ? [
+                    'entry_time' => $todayRecord->entry_time?->format('H:i'),
+                    'exit_time' => $todayRecord->exit_time?->format('H:i'),
+                    'has_justification' => !empty($todayRecord->justification)
+                ] : null,
+                'next_punch_type' => $nextPunchType,
+                'expected_time' => $expectedTime,
+                'current_time' => $now->format('H:i'),
+                'work_hours' => [
+                    'entry' => self::ENTRY_TIME,
+                    'exit' => self::EXIT_TIME
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erro ao verificar status: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro interno do servidor'
+            ], 500);
+        }
     }
 
     public function verify(Request $request)
@@ -373,6 +382,16 @@ class AttendanceController extends Controller
         ]);
     }
     
+    public function registerFromDashboard(Request $request)
+    {
+        return $this->registerAttendance($request);
+    }
+    
+    public function store(Request $request)
+    {
+        return $this->registerAttendance($request);
+    }
+    
     // Método para calcular o próximo horário de registro esperado
     private function getNextRegisterTime($userId)
     {
@@ -455,8 +474,10 @@ class AttendanceController extends Controller
                 ->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
                 ->whereNotNull('entry_time')
-                ->distinct()
-                ->count(DB::raw('DATE(created_at)'));
+                ->selectRaw('DATE(created_at) as attendance_date')
+                ->groupBy('attendance_date')
+                ->get()
+                ->count();
             
             $percentual = ($diasUteis > 0) ? round(($diasComRegistro / $diasUteis) * 100) : 0;
             

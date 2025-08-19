@@ -43,7 +43,7 @@
     @yield('styles')
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #003366;">
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #f08223;">
         <div class="container">
             <a class="navbar-brand" href="{{ route('login') }}">
                 <img src="{{ asset('images/logo-unifil.png') }}" alt="Logo" width="40" height="40" class="d-inline-block align-top">

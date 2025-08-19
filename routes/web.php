@@ -31,14 +31,13 @@ Route::get('/logout', function() {
 Route::post('/facial-login', [AuthController::class, 'facialLogin'])->name('facial.login');
 Route::post('/facial-login/confirm', [AuthController::class, 'confirmFacialLogin'])->name('facial.login.confirm');
 Route::post('/facial-login/reject', [AuthController::class, 'rejectFacialLogin'])->name('facial.login.reject');
-Route::get('/admin/login', [AuthController::class, 'showAdminLoginForm'])->name('admin.login');
 
 // API para reconhecimento facial
 Route::post('/api/attendance/verify', [AttendanceController::class, 'verify']);
 Route::get('/api/attendance/status', [AttendanceController::class, 'status']);
 
 // Rotas protegidas por autenticação
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\StudentMiddleware::class])->group(function () {
     // Dashboard do aluno
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
@@ -56,18 +55,17 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/attendance/history', [AttendanceController::class, 'history'])->name('attendance.history')->middleware(\App\Http\Middleware\CheckEmailLogin::class);
 });
 
-// Rotas administrativas (temporariamente sem middleware para teste)
+// Rotas administrativas  
 Route::middleware(['auth'])->prefix('admin')->group(function () {
     // Dashboard admin
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
     
-    // Usuários
-    Route::resource('users', UserController::class);
+    // Usuários (excluindo create e store - admins não podem criar usuários)
+    Route::resource('users', UserController::class)->except(['create', 'store']);
     
     // Relatórios
     Route::get('/reports', [AdminDashboardController::class, 'reports'])->name('admin.reports');
     Route::post('/reports/generate', [AdminDashboardController::class, 'generateReport'])->name('admin.reports.generate');
-    Route::get('/reports/export', [AdminDashboardController::class, 'exportReport'])->name('admin.reports.export');
     
     // Configurações
     Route::get('/config', [AdminDashboardController::class, 'config'])->name('admin.config');
@@ -83,10 +81,10 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
 //     return response()->json(['success' => true, 'message' => 'Test endpoint works!']);
 // });
 
-Route::post('/register-attendance-dashboard', [App\Http\Controllers\AttendanceController::class, 'registerFromDashboard'])->name('attendance.register.dashboard');
-
-Route::post('/register-attendance', [App\Http\Controllers\AttendanceController::class, 'registerAttendance'])->name('attendance.register');
+Route::post('/register-attendance-dashboard', [App\Http\Controllers\AttendanceController::class, 'registerFromDashboard'])
+    ->name('attendance.register.dashboard')
+    ->middleware(['auth', \App\Http\Middleware\StudentMiddleware::class]);
 
 Route::post('/register-attendance', [App\Http\Controllers\AttendanceController::class, 'registerAttendance'])
     ->name('attendance.register')
-    ->middleware('auth');
+    ->middleware(['auth', \App\Http\Middleware\StudentMiddleware::class]);

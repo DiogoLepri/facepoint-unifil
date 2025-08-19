@@ -6,8 +6,8 @@
 <style>
     .nav-pills .nav-link.active {
         background-color: transparent;
-        color: #003366;
-        border-bottom: 3px solid #003366;
+        color: #f08223;
+        border-bottom: 3px solid #f08223;
         border-radius: 0;
     }
     .nav-pills .nav-link {
@@ -38,12 +38,6 @@
             <li class="nav-item">
                 <a class="nav-link active" href="{{ route('users.index') }}">Alunos</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('admin.reports') }}">Relatórios</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('admin.config') }}">Configurações</a>
-            </li>
         </ul>
     </div>
 </div>
@@ -54,7 +48,6 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h5 class="card-title">Gerenciar Usuários</h5>
-                    <a href="{{ route('users.create') }}" class="btn btn-primary">Novo Usuário</a>
                 </div>
                 
                 <div class="row mb-4">

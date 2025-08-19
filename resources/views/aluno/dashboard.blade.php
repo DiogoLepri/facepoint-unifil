@@ -6,8 +6,8 @@
 <style>
     .nav-pills .nav-link.active {
         background-color: transparent;
-        color: #003366;
-        border-bottom: 3px solid #003366;
+        color: #f08223;
+        border-bottom: 3px solid #f08223;
         border-radius: 0;
     }
     .nav-pills .nav-link {
@@ -15,27 +15,37 @@
     }
     .stat-card {
         text-align: center;
-        padding: 20px;
-        background: linear-gradient(135deg, #003366 0%, #004080 100%);
+        padding: 25px 20px;
+        background: linear-gradient(135deg, #f08223 0%, #e6751e 100%);
         color: white;
-        border-radius: 10px;
+        border-radius: 12px;
         margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(240, 130, 35, 0.2);
+        transition: transform 0.2s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(240, 130, 35, 0.3);
     }
     .stat-number {
-        font-size: 2rem;
-        font-weight: bold;
-        margin-bottom: 5px;
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        letter-spacing: 1px;
     }
     .stat-label {
-        font-size: 0.9rem;
-        opacity: 0.9;
+        font-size: 0.95rem;
+        opacity: 0.95;
+        font-weight: 500;
     }
     .punch-clock-card {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 30px;
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 35px 30px;
         text-align: center;
         margin-bottom: 20px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        border: 1px solid #e8ecef;
     }
     .punch-btn {
         width: 150px;
@@ -60,16 +70,17 @@
         box-shadow: none;
     }
     .work-hours {
-        background: #e3f2fd;
+        background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
         border: 1px solid #2196f3;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 20px 0;
+        border-radius: 10px;
+        padding: 18px;
+        margin: 25px 0;
+        position: relative;
     }
     .current-time {
         font-size: 1.5rem;
         font-weight: bold;
-        color: #003366;
+        color: #f08223;
         margin-bottom: 10px;
     }
     .next-punch {
@@ -82,7 +93,7 @@
         border-radius: 15px;
     }
     .modal-header {
-        background: linear-gradient(135deg, #003366 0%, #004080 100%);
+        background: linear-gradient(135deg, #f08223 0%, #e6751e 100%);
         color: white;
         border-radius: 15px 15px 0 0;
     }
@@ -172,12 +183,12 @@
             <h5 class="mb-3">Registro de Ponto</h5>
             
             <div class="work-hours">
-                <strong>Horário de Estudo:</strong><br>
-                <span class="text-primary">14:00 às 18:00</span> (Segunda a Sexta)
+                <div style="margin-top: 5px;">
+                    <strong style="color: #1976d2; font-size: 1.1rem;">Horário de Estudo</strong><br>
+                    <span class="text-primary" style="font-size: 1.15rem; font-weight: 600;">14:00 às 18:00</span>
+                    <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">(Segunda a Sexta)</div>
+                </div>
             </div>
-            
-            <div class="current-time" id="display-time">--:--:--</div>
-            <div class="next-punch" id="next-punch-info">{{ $nextRegister ?? 'Carregando...' }}</div>
             
             <div class="mt-4">
                 <button type="button" class="punch-btn" id="punch-clock-btn">
@@ -185,19 +196,23 @@
                 </button>
             </div>
             
-            <div class="mt-3">
-                <small class="text-muted">
-                    Status: <span id="punch-status">Verificando...</span>
-                </small>
+            <div class="mt-3" style="background: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid #f08223;">
+                <div style="font-size: 0.95rem; color: #495057;">
+                    <strong style="color: #f08223;">Status:</strong> 
+                    <span id="punch-status" style="font-weight: 500;">Verificando...</span>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Atividade Recente -->
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Atividade Recente</h5>
+        <div class="card" style="border-radius: 12px; border: 1px solid #e8ecef; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius: 12px 12px 0 0; border-bottom: 2px solid #f08223;">
+                <h5 class="mb-0" style="color: #495057; font-weight: 600; display: flex; align-items: center;">
+                    <i class="fas fa-history" style="color: #f08223; margin-right: 10px;"></i>
+                    Atividade Recente
+                </h5>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -302,57 +317,103 @@ document.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
         const timeString = now.toLocaleTimeString('pt-BR');
         document.getElementById('current-time').textContent = timeString.substring(0, 5);
-        document.getElementById('display-time').textContent = timeString;
         document.getElementById('modal-current-time').textContent = timeString.substring(0, 5);
     }
     
-    // Verificar status do usuário
+    // Verificar status do usuário com timeout
     function checkUserStatus() {
-        fetch('/api/attendance/status')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const statusElement = document.getElementById('punch-status');
-                    
-                    if (data.is_weekend) {
-                        statusElement.textContent = 'Fim de semana - Descanso';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos
+        
+        fetch('/api/attendance/status', {
+            signal: controller.signal,
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const statusElement = document.getElementById('punch-status');
+                
+                if (data.is_weekend) {
+                    statusElement.innerHTML = '<span style="color: #6c757d;">🏖️ Fim de semana - Descanso</span>';
+                    punchBtn.disabled = true;
+                    punchBtn.style.opacity = '0.6';
+                    return;
+                }
+                
+                const nextType = data.next_punch_type === 'entry' ? 'Entrada' : 'Saída';
+                statusElement.innerHTML = `<span style="color: #28a745;">Próximo: ${nextType} (${data.expected_time})</span>`;
+                
+                if (data.today_record) {
+                    if (data.today_record.entry_time && data.today_record.exit_time) {
+                        statusElement.innerHTML = '<span style="color: #28a745;">Já registrou entrada e saída hoje</span>';
                         punchBtn.disabled = true;
-                        return;
-                    }
-                    
-                    const nextType = data.next_punch_type === 'entry' ? 'Entrada' : 'Saída';
-                    statusElement.textContent = `Próximo: ${nextType} (${data.expected_time})`;
-                    
-                    if (data.today_record) {
-                        if (data.today_record.entry_time && data.today_record.exit_time) {
-                            statusElement.textContent = 'Já registrou entrada e saída hoje';
-                            punchBtn.disabled = true;
-                        }
+                        punchBtn.style.opacity = '0.6';
                     }
                 }
-            })
-            .catch(error => {
-                console.error('Erro ao verificar status:', error);
-                document.getElementById('punch-status').textContent = 'Erro ao carregar status';
-            });
+                
+                // Habilitar botão se não estiver desabilitado
+                if (!punchBtn.disabled) {
+                    punchBtn.style.opacity = '1';
+                }
+            } else {
+                throw new Error(data.message || 'Erro desconhecido');
+            }
+        })
+        .catch(error => {
+            clearTimeout(timeoutId);
+            console.error('Erro ao verificar status:', error);
+            const statusElement = document.getElementById('punch-status');
+            
+            if (error.name === 'AbortError') {
+                statusElement.innerHTML = '<span style="color: #dc3545;">⚠️ Timeout - Tente novamente</span>';
+            } else {
+                statusElement.innerHTML = '<span style="color: #dc3545;">❌ Erro de conexão</span>';
+            }
+        });
     }
     
-    // Evento do botão de bater ponto
+    // Evento do botão de bater ponto com melhor tratamento de erro
     punchBtn.addEventListener('click', function() {
         if (punchBtn.disabled) return;
         
         punchBtn.disabled = true;
-        punchBtn.textContent = 'VERIFICANDO...';
+        punchBtn.innerHTML = '<div style="font-size: 0.9rem;">VERIFICANDO...<br><div style="font-size: 0.7rem; margin-top: 2px;">⏳</div></div>';
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            showErrorMessage('Timeout - Operação cancelada');
+            resetPunchButton();
+        }, 15000); // 15 segundos
         
         // Fazer primeira chamada para verificar se precisa de justificativa
         fetch('/register-attendance', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            signal: controller.signal
         })
-        .then(response => response.json())
+        .then(response => {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             currentPunchData = data;
             
@@ -364,16 +425,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 showJustificationModal(data);
             } else {
                 // Erro - mostrar mensagem
-                alert(data.message || 'Erro ao registrar ponto');
+                showErrorMessage(data.message || 'Erro ao registrar ponto');
                 resetPunchButton();
             }
         })
         .catch(error => {
+            clearTimeout(timeoutId);
             console.error('Erro:', error);
-            alert('Erro de comunicação com o servidor');
+            
+            if (error.name === 'AbortError') {
+                showErrorMessage('Operação cancelada por timeout');
+            } else {
+                showErrorMessage('Erro de comunicação com o servidor');
+            }
             resetPunchButton();
         });
     });
+    
+    // Função para mostrar erros de forma mais elegante
+    function showErrorMessage(message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.style.position = 'fixed';
+        alertDiv.style.top = '20px';
+        alertDiv.style.right = '20px';
+        alertDiv.style.zIndex = '9999';
+        alertDiv.style.minWidth = '300px';
+        alertDiv.innerHTML = `
+            <strong>❌ Erro:</strong> ${message}
+            <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        // Remover automaticamente após 5 segundos
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
     
     function showSimpleConfirmation(data) {
         // Preencher modal com dados
@@ -430,36 +521,72 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmBtn.disabled = true;
         confirmBtn.textContent = 'Registrando...';
         
-        // Fazer registro final
+        // Fazer registro final com timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            showErrorMessage('Timeout durante o registro');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirmar';
+        }, 15000);
+        
         fetch('/register-attendance', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
                 justification: justification
-            })
+            }),
+            signal: controller.signal
         })
-        .then(response => response.json())
+        .then(response => {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 confirmModal.hide();
-                alert(data.message || 'Ponto registrado com sucesso!');
+                
+                // Mostrar mensagem de sucesso
+                const successDiv = document.createElement('div');
+                successDiv.className = 'alert alert-success alert-dismissible fade show';
+                successDiv.style.position = 'fixed';
+                successDiv.style.top = '20px';
+                successDiv.style.right = '20px';
+                successDiv.style.zIndex = '9999';
+                successDiv.style.minWidth = '300px';
+                successDiv.innerHTML = `
+                    <strong>Sucesso:</strong> ${data.message || 'Ponto registrado com sucesso!'}
+                    <button type=\"button\" class=\"btn-close\" onclick=\"this.parentElement.remove()\"></button>
+                `;
+                document.body.appendChild(successDiv);
                 
                 // Recarregar a página para atualizar os dados
                 setTimeout(() => {
                     window.location.reload();
-                }, 1000);
+                }, 2000);
             } else {
-                alert(data.message || 'Erro ao registrar ponto');
+                showErrorMessage(data.message || 'Erro ao registrar ponto');
                 confirmBtn.disabled = false;
                 confirmBtn.textContent = 'Confirmar';
             }
         })
         .catch(error => {
+            clearTimeout(timeoutId);
             console.error('Erro:', error);
-            alert('Erro de comunicação com o servidor');
+            
+            if (error.name === 'AbortError') {
+                showErrorMessage('Operação cancelada por timeout');
+            } else {
+                showErrorMessage('Erro de comunicação com o servidor');
+            }
             confirmBtn.disabled = false;
             confirmBtn.textContent = 'Confirmar';
         });

@@ -11,7 +11,7 @@
     }
     
     .navbar {
-        background-color: #003366 !important;
+        background-color: #f08223 !important;
     }
     
     .navbar-brand {
@@ -44,7 +44,7 @@
     }
     
     .system-title {
-        color: #003366;
+        color: #f08223;
         font-size: 1.6rem;
         font-weight: 600;
         margin-bottom: 0.5rem;
@@ -57,7 +57,7 @@
     }
     
     .admin-badge {
-        color: #FFA500;
+        color: #f08223;
         font-weight: 600;
         font-size: 1rem;
     }
@@ -71,7 +71,7 @@
     }
     
     .login-card h5 {
-        color: #003366;
+        color: #f08223;
         font-weight: 600;
         margin-bottom: 25px;
         text-align: center;
@@ -91,12 +91,12 @@
     }
     
     .form-control:focus {
-        border-color: #003366;
-        box-shadow: 0 0 0 0.2rem rgba(0, 51, 102, 0.25);
+        border-color: #f08223;
+        box-shadow: 0 0 0 0.2rem rgba(240, 130, 35, 0.25);
     }
     
     .btn-warning {
-        background-color: #FFA500;
+        background-color: #f08223;
         border: none;
         color: white;
         padding: 12px;
@@ -109,7 +109,7 @@
     }
     
     .btn-warning:hover {
-        background-color: #FF8C00;
+        background-color: #e6751e;
         color: white;
     }
     
@@ -146,7 +146,7 @@
     
     .admin-icon {
         font-size: 2rem;
-        color: #FFA500;
+        color: #f08223;
         margin-bottom: 15px;
     }
     

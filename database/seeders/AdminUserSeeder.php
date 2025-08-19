@@ -30,7 +30,7 @@ class AdminUserSeeder extends Seeder
             $this->command->info('Admin user created successfully!');
             $this->command->info('Email: joao.andrade@unifil.br');
             $this->command->info('Password: Admin@2025!UniFil');
-            $this->command->warn('IMPORTANT: Please share this password securely with the administrator and consider changing it after first login.');
+            $this->command->warn('IMPORTANT: Please share this password securely with the admini1strator and consider changing it after first login.');
         } else {
             $this->command->info('Admin user already exists.');
         }

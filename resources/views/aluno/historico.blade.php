@@ -6,8 +6,8 @@
 <style>
     .nav-pills .nav-link.active {
         background-color: transparent;
-        color: #003366;
-        border-bottom: 3px solid #003366;
+        color: #f08223;
+        border-bottom: 3px solid #f08223;
         border-radius: 0;
     }
     .nav-pills .nav-link {
@@ -16,7 +16,7 @@
     
     /* Estatísticas do período */
     .period-stats {
-        background: linear-gradient(135deg, #003366 0%, #004080 100%);
+        background: linear-gradient(135deg, #f08223 0%, #e6751e 100%);
         color: white;
         border-radius: 15px;
         padding: 25px;
@@ -45,12 +45,12 @@
         margin-bottom: 25px;
     }
     .filter-card h6 {
-        color: #003366;
+        color: #f08223;
         margin-bottom: 20px;
         font-weight: bold;
     }
     .btn-filter {
-        background: linear-gradient(135deg, #003366 0%, #004080 100%);
+        background: linear-gradient(135deg, #f08223 0%, #e6751e 100%);
         border: none;
         border-radius: 10px;
         padding: 10px 25px;
@@ -72,7 +72,7 @@
         border: none;
     }
     .records-card .card-header {
-        background: linear-gradient(135deg, #003366 0%, #004080 100%);
+        background: linear-gradient(135deg, #f08223 0%, #e6751e 100%);
         color: white;
         border: none;
         padding: 20px 25px;
@@ -87,7 +87,7 @@
         border: none;
         padding: 15px 20px;
         font-weight: 600;
-        color: #003366;
+        color: #f08223;
     }
     .records-table td {
         border: none;
@@ -166,10 +166,10 @@
         border-radius: 10px;
         margin: 0 2px;
         border: none;
-        color: #003366;
+        color: #f08223;
     }
     .pagination .page-item.active .page-link {
-        background: linear-gradient(135deg, #003366 0%, #004080 100%);
+        background: linear-gradient(135deg, #f08223 0%, #e6751e 100%);
         border: none;
     }
 </style>

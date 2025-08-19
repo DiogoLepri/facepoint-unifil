@@ -111,8 +111,10 @@ class DashboardController extends Controller
             $diasComRegistro = AttendanceRecord::where('user_id', $userId)
                 ->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
-                ->distinct('date')
-                ->count(DB::raw('DATE(created_at)'));
+                ->selectRaw('DATE(created_at) as attendance_date')
+                ->groupBy('attendance_date')
+                ->get()
+                ->count();
             
             // Calcular percentual
             $percentual = ($diasUteis > 0) ? round(($diasComRegistro / $diasUteis) * 100) : 0;

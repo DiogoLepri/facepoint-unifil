@@ -66,6 +66,12 @@
         font-size: 0.95rem;
     }
     
+    .required-asterisk {
+        color: #dc3545;
+        margin-left: 3px;
+        font-weight: bold;
+    }
+    
     .form-control {
         border: 1px solid #ddd;
         border-radius: 5px;
@@ -172,6 +178,7 @@
         height: 100%;
         object-fit: cover;
         border-radius: 50%;
+        transform: scaleX(-1);
     }
     
     #canvas {
@@ -382,7 +389,7 @@
                     <h2 class="section-title">Dados Pessoais</h2>
                     
                     <div class="mb-3">
-                        <label for="name" class="form-label">Nome Completo:</label>
+                        <label for="name" class="form-label">Nome Completo:<span class="required-asterisk">*</span></label>
                         <input type="text" 
                                class="form-control @error('name') is-invalid @enderror" 
                                id="name" 
@@ -398,7 +405,7 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="matricula" class="form-label">Matrícula:</label>
+                        <label for="matricula" class="form-label">Matrícula:<span class="required-asterisk">*</span></label>
                         <input type="text" 
                                class="form-control @error('matricula') is-invalid @enderror" 
                                id="matricula" 
@@ -416,7 +423,7 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="email" class="form-label">E-mail Institucional:</label>
+                        <label for="email" class="form-label">E-mail Institucional:<span class="required-asterisk">*</span></label>
                         <input type="email" 
                                class="form-control @error('email') is-invalid @enderror" 
                                id="email" 
@@ -432,7 +439,7 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="curso" class="form-label">Curso:</label>
+                        <label for="curso" class="form-label">Curso:<span class="required-asterisk">*</span></label>
                         <select class="form-control @error('curso') is-invalid @enderror" 
                                 id="curso" 
                                 name="curso" 
@@ -447,19 +454,21 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="password" class="form-label">Senha:</label>
+                        <label for="password" class="form-label">Senha:<span class="required-asterisk">*</span></label>
                         <input type="password" 
                                class="form-control @error('password') is-invalid @enderror" 
                                id="password" 
                                name="password" 
+                               minlength="8"
                                required>
+                        <small class="form-text text-muted">A senha deve conter pelo menos 8 dígitos</small>
                         @error('password')
                             <span class="invalid-feedback">{{ $message }}</span>
                         @enderror
                     </div>
                     
                     <div class="mb-3">
-                        <label for="password-confirm" class="form-label">Confirmar Senha:</label>
+                        <label for="password-confirm" class="form-label">Confirmar Senha:<span class="required-asterisk">*</span></label>
                         <input type="password" 
                                class="form-control" 
                                id="password-confirm" 
@@ -529,7 +538,7 @@
                                name="lgpd_consent" 
                                required>
                         <label class="form-check-label" for="lgpd-consent">
-                            Concordo com a coleta de dados biométricos (LGPD)
+                            Concordo com a coleta de dados biométricos (LGPD)<span class="required-asterisk">*</span>
                         </label>
                     </div>
                     
@@ -655,8 +664,11 @@ document.addEventListener('DOMContentLoaded', function() {
         canvas.width = video.videoWidth || 640;
         canvas.height = video.videoHeight || 480;
         
-        // Draw current video frame to canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Draw current video frame to canvas (correcting the mirroring)
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
         
         try {
             // Detect face
@@ -751,8 +763,11 @@ document.addEventListener('DOMContentLoaded', function() {
         canvas.width = video.videoWidth || 640;
         canvas.height = video.videoHeight || 480;
         
-        // Draw video frame to canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Draw video frame to canvas (correcting the mirroring)
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
         
         try {
             // Final quality check

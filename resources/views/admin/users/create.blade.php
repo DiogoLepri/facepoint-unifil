@@ -6,8 +6,8 @@
 <style>
     .nav-pills .nav-link.active {
         background-color: transparent;
-        color: #003366;
-        border-bottom: 3px solid #003366;
+        color: #f08223;
+        border-bottom: 3px solid #f08223;
         border-radius: 0;
     }
     .nav-pills .nav-link {
@@ -32,6 +32,15 @@
     }
     .form-label {
         font-weight: 500;
+    }
+    #video {
+        transform: scaleX(-1);
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    #canvas {
+        border-radius: 50%;
+        object-fit: cover;
     }
 </style>
 @endsection
@@ -134,7 +143,8 @@
 
                             <div class="mb-3">
                                 <label for="password" class="form-label">Senha</label>
-                                <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" required>
+                                <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" required minlength="8">
+                                <small class="form-text text-muted">A senha deve conter pelo menos 8 dígitos</small>
                                 @error('password')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -235,8 +245,12 @@
         async function captureImage() {
             if (!video.srcObject) return;
             
-            // Desenhar frame do vídeo no canvas
-            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            // Desenhar frame do vídeo no canvas (corrigindo o espelhamento)
+            const ctx = canvas.getContext('2d');
+            ctx.save();
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+            ctx.restore();
             
             // Detectar face
             const detections = await faceapi.detectSingleFace(
