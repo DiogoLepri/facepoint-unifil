@@ -324,22 +324,22 @@
 @endsection
 
 @section('content')
-<div class="main-container">
+<div class="main-container fade-in-up">
     <!-- Logo Section -->
     <div class="logo-container">
         <div class="d-flex align-items-center justify-content-center">
-            <img src="{{ asset('images/logo-computacao.png') }}" alt="UniFil" class="logo-unifil">
-            <img src="{{ asset('images/logo-npi.png') }}" alt="NPI" class="npi-logo">
+            <img src="{{ asset('images/logo-computacao.png') }}" alt="UniFil" class="logo-unifil" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+            <img src="{{ asset('images/logo-npi.png') }}" alt="NPI" class="npi-logo" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
         </div>
-        <h1 class="system-title">Sistema de Ponto por Reconhecimento Facial</h1>
-        <p class="subtitle">Núcleo de Práticas em Informática (NPI)</p>
+        <h1 class="page-title">Sistema de Ponto por Reconhecimento Facial</h1>
+        <p class="page-subtitle">Núcleo de Práticas em Informática (NPI)</p>
     </div>
 
     <!-- Login Forms Container -->
     <div class="login-container">
         <!-- Traditional Login -->
         <div class="login-card">
-            <h5>Login no Sistema</h5>
+            <h5><i class="fas fa-user-lock me-2 text-primary-custom"></i>Login no Sistema</h5>
             <form method="POST" action="{{ route('login') }}">
                 @csrf
                 <div class="mb-3">
@@ -394,7 +394,7 @@
 
         <!-- Facial Recognition Login -->
         <div class="login-card">
-            <h5>Registro Rápido por Facial</h5>
+            <h5><i class="fas fa-camera me-2 text-primary-custom"></i>Registro Rápido por Facial</h5>
             
             <div class="camera-container" id="video-container">
                 <video id="video" style="display: none;" autoplay muted></video>

@@ -9,6 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/professional-modern.css') }}">
     <style>
         .navbar-brand {
             display: flex;
@@ -43,26 +44,26 @@
     @yield('styles')
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #f08223;">
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #f08223 0%, #e6751e 100%);">
         <div class="container">
             <a class="navbar-brand" href="{{ route('login') }}">
-                <img src="{{ asset('images/logo-unifil.png') }}" alt="Logo" width="40" height="40" class="d-inline-block align-top">
+                <img src="{{ asset('images/logo-unifil.png') }}" alt="Logo" width="40" height="40" class="d-inline-block align-top" style="border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div class="navbar-brand-content">
                     <span class="navbar-brand-title">FacePoint UniFil</span>
                     <span class="navbar-brand-subtitle">Sistema de Ponto por Reconhecimento Facial</span>
                 </div>
             </a>
             @auth
-            <div class="navbar-text text-white me-3">
-                Olá, {{ Auth::user()->name }}!
+            <div class="navbar-text text-white me-3" style="font-weight: 500;">
+                <i class="fas fa-user-circle me-1"></i>Olá, {{ Auth::user()->name }}!
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('dashboard') }}" class="btn btn-sm btn-outline-light">
+                <a href="{{ route('dashboard') }}" class="btn btn-sm" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-weight: 500;">
                     <i class="fas fa-home me-1"></i>Dashboard
                 </a>
                 <form action="{{ route('logout') }}" method="POST" class="d-inline">
                     @csrf
-                    <button type="submit" class="btn btn-sm btn-light">
+                    <button type="submit" class="btn btn-sm" style="background: rgba(255,255,255,0.9); color: #f08223; border: none; font-weight: 600;">
                         <i class="fas fa-sign-out-alt me-1"></i>Sair
                     </button>
                 </form>

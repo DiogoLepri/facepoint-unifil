@@ -365,7 +365,7 @@
 @endsection
 
 @section('content')
-<div class="main-container">
+<div class="main-container fade-in-up">
     <h1 class="page-title">Cadastro de Novo Usuário</h1>
     <p class="page-subtitle">Preencha os campos abaixo para criar sua conta no sistema</p>
     
@@ -386,7 +386,7 @@
             <div class="form-grid">
                 <!-- Left Column - Personal Data -->
                 <div>
-                    <h2 class="section-title">Dados Pessoais</h2>
+                    <h2 class="section-title"><i class="fas fa-user me-2 text-primary-custom"></i>Dados Pessoais</h2>
                     
                     <div class="mb-3">
                         <label for="name" class="form-label">Nome Completo:<span class="required-asterisk">*</span></label>
@@ -479,7 +479,7 @@
                 
                 <!-- Right Column - Facial Registration -->
                 <div>
-                    <h2 class="section-title">Registro Facial</h2>
+                    <h2 class="section-title"><i class="fas fa-camera me-2 text-primary-custom"></i>Registro Facial</h2>
                     <p class="section-subtitle">Posicione seu rosto para o cadastro biométrico</p>
                     
                     <div class="camera-container" id="video-container">

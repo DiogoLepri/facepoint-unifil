@@ -130,15 +130,19 @@
 @endsection
 
 @section('content')
-<div class="row">
+<div class="row fade-in-down">
     <div class="col-md-12 mb-4">
         <ul class="nav nav-pills mb-3">
             <li class="nav-item">
-                <a class="nav-link active" href="{{ route('dashboard') }}">Início</a>
+                <a class="nav-link active" href="{{ route('dashboard') }}">
+                    <i class="fas fa-home me-2"></i>Início
+                </a>
             </li>
             @if(Auth::user()->last_login_type === 'email')
             <li class="nav-item">
-                <a class="nav-link" href="{{ route('attendance.history') }}">Histórico</a>
+                <a class="nav-link" href="{{ route('attendance.history') }}">
+                    <i class="fas fa-history me-2"></i>Histórico
+                </a>
             </li>
             @endif
         </ul>
@@ -154,33 +158,33 @@
     </div>
 </div>
 
-<div class="row">
+<div class="row fade-in-up">
     <!-- Estatísticas -->
     <div class="col-md-4">
         <div class="stat-card">
-            <div class="stat-number">{{ $hoursRegistered ?? '0h'}}</div>
+            <div class="stat-number"><i class="fas fa-clock me-2"></i>{{ $hoursRegistered ?? '0h'}}</div>
             <div class="stat-label">Horas (Este Mês)</div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="stat-card">
-            <div class="stat-number">{{ $attendance ?? '0%' }}</div>
+            <div class="stat-number"><i class="fas fa-percentage me-2"></i>{{ $attendance ?? '0%' }}</div>
             <div class="stat-label">Frequência (Este Mês)</div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="stat-card">
-            <div class="stat-number" id="current-time">--:--</div>
+            <div class="stat-number" id="current-time"><i class="fas fa-clock me-2"></i>--:--</div>
             <div class="stat-label">Horário Atual</div>
         </div>
     </div>
 </div>
 
-<div class="row">
+<div class="row fade-in-up">
     <!-- Registro de Ponto -->
     <div class="col-md-6">
         <div class="punch-clock-card">
-            <h5 class="mb-3">Registro de Ponto</h5>
+            <h5 class="mb-3"><i class="fas fa-user-clock me-2 text-primary-custom"></i>Registro de Ponto</h5>
             
             <div class="work-hours">
                 <div style="margin-top: 5px;">
@@ -207,10 +211,10 @@
     
     <!-- Atividade Recente -->
     <div class="col-md-6">
-        <div class="card" style="border-radius: 12px; border: 1px solid #e8ecef; box-shadow: 0 2px 12px rgba(0,0,0,0.08);">
-            <div class="card-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius: 12px 12px 0 0; border-bottom: 2px solid #f08223;">
-                <h5 class="mb-0" style="color: #495057; font-weight: 600; display: flex; align-items: center;">
-                    <i class="fas fa-history" style="color: #f08223; margin-right: 10px;"></i>
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-history me-2 text-primary-custom"></i>
                     Atividade Recente
                 </h5>
             </div>

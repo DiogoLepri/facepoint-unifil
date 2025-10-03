@@ -121,27 +121,35 @@
 @endsection
 
 @section('content')
-<div class="row">
+<div class="row fade-in-down">
     <div class="col-md-12 mb-4">
         <ul class="nav nav-pills mb-3">
             <li class="nav-item">
-                <a class="nav-link active" href="{{ route('admin.dashboard') }}">Início</a>
+                <a class="nav-link active" href="{{ route('admin.dashboard') }}">
+                    <i class="fas fa-home me-2"></i>Início
+                </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ route('admin.reports') }}">Relatórios</a>
+                <a class="nav-link" href="{{ route('admin.reports') }}">
+                    <i class="fas fa-chart-bar me-2"></i>Relatórios
+                </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{{ route('users.index') }}">Alunos</a>
+                <a class="nav-link" href="{{ route('users.index') }}">
+                    <i class="fas fa-users me-2"></i>Alunos
+                </a>
             </li>
         </ul>
     </div>
 </div>
 
-<div class="row">
+<div class="row fade-in-up">
     <div class="col-md-12">
         <div class="card">
+            <div class="card-header">
+                <h5 class="card-title"><i class="fas fa-tachometer-alt me-2 text-primary-custom"></i>Painel de Controle</h5>
+            </div>
             <div class="card-body">
-                <h5 class="card-title">Painel de Controle</h5>
                 
                 <div class="row mt-4">
                     <div class="col-md-12">
@@ -154,7 +162,7 @@
                 
                 <div class="row mt-4">
                     <div class="col-md-6">
-                        <h5 class="mb-3">Atividade Recente</h5>
+                        <h5 class="mb-3"><i class="fas fa-clock me-2 text-primary-custom"></i>Atividade Recente</h5>
                         
                         <div class="card activity-card">
                             <div class="card-body p-0">
@@ -205,11 +213,15 @@
                     
                     <div class="col-md-6">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5>Ações Rápidas</h5>
+                            <h5><i class="fas fa-bolt me-2 text-primary-custom"></i>Ações Rápidas</h5>
                         </div>
-                        <div class="d-grid gap-2">
-                            <a href="{{ route('admin.reports') }}" class="btn btn-primary">GERAR RELATÓRIO</a>
-                            <a href="{{ route('users.index') }}" class="btn btn-outline-primary">GERENCIAR ALUNOS</a>
+                        <div class="d-grid gap-3">
+                            <a href="{{ route('admin.reports') }}" class="btn btn-primary">
+                                <i class="fas fa-file-chart-line me-2"></i>GERAR RELATÓRIO
+                            </a>
+                            <a href="{{ route('users.index') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-users-cog me-2"></i>GERENCIAR ALUNOS
+                            </a>
                         </div>
                     </div>
                 </div>
