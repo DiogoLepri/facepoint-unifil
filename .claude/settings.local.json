@@ -14,7 +14,9 @@
       "Bash(composer:*)",
       "Bash(kill:*)",
       "Bash(curl:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(cat:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

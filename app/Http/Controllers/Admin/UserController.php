@@ -52,6 +52,9 @@ class UserController extends Controller
             'curso' => 'required|string',
             'role' => 'required|in:aluno,admin',
             'password' => 'nullable|string|min:8|confirmed',
+            'schedule' => 'nullable|array',
+            'schedule.*.entry' => 'nullable|date_format:H:i',
+            'schedule.*.exit' => 'nullable|date_format:H:i',
             'face_data' => 'nullable|string',
             'profile_image' => 'nullable|image|max:2048',
         ]);
@@ -60,21 +63,38 @@ class UserController extends Controller
         $user->email = $request->email;
         $user->matricula = $request->matricula;
         $user->curso = $request->curso;
-        
+
         // Prevent changing existing admin role or creating new admins
         if ($user->role !== 'admin' && $request->role === 'admin') {
             return redirect()->back()->withErrors(['role' => 'Não é possível promover usuários para administrador via interface.']);
         }
-        
+
         // Only allow role change from admin to aluno, not the reverse
         if ($user->role === 'admin' || $request->role === 'aluno') {
             $user->role = $request->role;
         }
-        
+
+        // Update schedule - only save days that have both entry and exit times
+        if ($request->has('schedule')) {
+            $schedule = [];
+            foreach ($request->schedule as $day => $times) {
+                // Only save if both entry and exit times are provided
+                if (!empty($times['entry']) && !empty($times['exit'])) {
+                    $schedule[$day] = [
+                        'entry' => $times['entry'],
+                        'exit' => $times['exit']
+                    ];
+                }
+            }
+            $user->schedule = !empty($schedule) ? $schedule : null;
+        } else {
+            $user->schedule = null;
+        }
+
         if ($request->password) {
             $user->password = Hash::make($request->password);
         }
-        
+
         $user->save();
         
         // Processar imagem facial

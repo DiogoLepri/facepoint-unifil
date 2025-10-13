@@ -14,19 +14,151 @@ class DashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
+
         // Obter os últimos 5 registros de presença do usuário
         $attendances = AttendanceRecord::where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
-        
+
         // Calcular estatísticas usando os mesmos métodos do AttendanceController
         $hoursRegistered = $this->calculateHoursRegistered($user->id);
         $attendance = $this->calculateAttendancePercentage($user->id);
         $nextRegister = $this->getNextRegisterTime($user->id);
-        
-        return view('aluno.dashboard', compact('attendances', 'hoursRegistered', 'attendance', 'nextRegister'));
+
+        // Obter horários e dias personalizados do usuário
+        $todayName = strtolower(Carbon::now()->englishDayOfWeek);
+
+        // Check new schedule format first, then fall back to old format
+        if (!empty($user->schedule) && is_array($user->schedule) && isset($user->schedule[$todayName])) {
+            $entryTime = $user->schedule[$todayName]['entry'] ?? '14:00';
+            $exitTime = $user->schedule[$todayName]['exit'] ?? '18:00';
+        } else {
+            $entryTime = $user->entry_time ?? '14:00';
+            $exitTime = $user->exit_time ?? '18:00';
+        }
+
+        // Formatar horário completo do usuário (todos os dias)
+        $scheduleFormatted = $this->formatSchedule($user);
+
+        // Verificar se hoje é um dia permitido
+        $isAllowedToday = $this->isAllowedDay($user, Carbon::now());
+
+        return view('aluno.dashboard', compact(
+            'attendances',
+            'hoursRegistered',
+            'attendance',
+            'nextRegister',
+            'entryTime',
+            'exitTime',
+            'scheduleFormatted',
+            'isAllowedToday'
+        ));
+    }
+
+    /**
+     * Format days of week to Portuguese
+     */
+    private function formatDaysOfWeek($days)
+    {
+        if (empty($days)) {
+            return 'Segunda a Sexta';
+        }
+
+        $dayNames = [
+            'monday' => 'Segunda',
+            'tuesday' => 'Terça',
+            'wednesday' => 'Quarta',
+            'thursday' => 'Quinta',
+            'friday' => 'Sexta',
+            'saturday' => 'Sábado',
+            'sunday' => 'Domingo'
+        ];
+
+        $formattedDays = array_map(function($day) use ($dayNames) {
+            return $dayNames[strtolower($day)] ?? $day;
+        }, $days);
+
+        return implode(', ', $formattedDays);
+    }
+
+    /**
+     * Check if the user is allowed to register attendance on the given day
+     */
+    private function isAllowedDay($user, Carbon $date)
+    {
+        // Get the day name in lowercase (e.g., "monday", "tuesday")
+        $dayName = strtolower($date->englishDayOfWeek);
+
+        // Check new schedule format first
+        if (!empty($user->schedule) && is_array($user->schedule)) {
+            return isset($user->schedule[$dayName]);
+        }
+
+        // Fallback to old format
+        if (!empty($user->days_of_week)) {
+            return in_array($dayName, $user->days_of_week);
+        }
+
+        // Default: allow all weekdays (Monday-Friday)
+        return !$date->isWeekend();
+    }
+
+    /**
+     * Format user schedule for display
+     */
+    private function formatSchedule($user)
+    {
+        $dayNames = [
+            'monday' => 'Segunda-feira',
+            'tuesday' => 'Terça-feira',
+            'wednesday' => 'Quarta-feira',
+            'thursday' => 'Quinta-feira',
+            'friday' => 'Sexta-feira',
+            'saturday' => 'Sábado',
+            'sunday' => 'Domingo'
+        ];
+
+        $formattedSchedule = [];
+
+        // Check new schedule format first
+        if (!empty($user->schedule) && is_array($user->schedule)) {
+            foreach ($user->schedule as $day => $times) {
+                $dayLabel = $dayNames[$day] ?? ucfirst($day);
+                $formattedSchedule[] = [
+                    'day' => $dayLabel,
+                    'entry' => $times['entry'] ?? '14:00',
+                    'exit' => $times['exit'] ?? '18:00'
+                ];
+            }
+        }
+        // Fallback to old format
+        else if (!empty($user->days_of_week)) {
+            $entryTime = $user->entry_time ?? '14:00';
+            $exitTime = $user->exit_time ?? '18:00';
+
+            foreach ($user->days_of_week as $day) {
+                $dayLabel = $dayNames[strtolower($day)] ?? ucfirst($day);
+                $formattedSchedule[] = [
+                    'day' => $dayLabel,
+                    'entry' => $entryTime,
+                    'exit' => $exitTime
+                ];
+            }
+        }
+        // Default: weekdays with default times
+        else {
+            $defaultDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+            foreach ($defaultDays as $day) {
+                $formattedSchedule[] = [
+                    'day' => $dayNames[$day],
+                    'entry' => '14:00',
+                    'exit' => '18:00'
+                ];
+            }
+        }
+
+        return $formattedSchedule;
     }
     
     public function profile()

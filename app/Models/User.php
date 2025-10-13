@@ -24,6 +24,10 @@ class User extends Authenticatable
         'matricula',
         'curso',
         'role',
+        'entry_time',
+        'exit_time',
+        'days_of_week',
+        'schedule',
         'last_login_type',
         'last_login_at',
     ];
@@ -46,6 +50,8 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'days_of_week' => 'array',
+        'schedule' => 'array',
     ];
 
     /**

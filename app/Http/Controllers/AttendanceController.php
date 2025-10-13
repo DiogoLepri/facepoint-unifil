@@ -11,10 +11,52 @@ use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
 {
-    // Definir horários de trabalho (14:00 às 18:00, segunda a sexta)
-    const ENTRY_TIME = '14:00';
-    const EXIT_TIME = '18:00';
+    // Horários padrão (usados como fallback se o usuário não tiver horários definidos)
+    const DEFAULT_ENTRY_TIME = '14:00';
+    const DEFAULT_EXIT_TIME = '18:00';
     const TOLERANCE_MINUTES = 15; // Tolerância de 15 minutos
+
+    /**
+     * Check if the user is allowed to register attendance on the given day
+     */
+    private function isAllowedDay($user, Carbon $date)
+    {
+        $dayName = strtolower($date->englishDayOfWeek);
+
+        // Check new schedule format first
+        if (!empty($user->schedule) && is_array($user->schedule)) {
+            return isset($user->schedule[$dayName]);
+        }
+
+        // Fallback to old format
+        if (empty($user->days_of_week)) {
+            return !$date->isWeekend();
+        }
+
+        return in_array($dayName, $user->days_of_week);
+    }
+
+    /**
+     * Get entry and exit times for a specific day
+     */
+    private function getTimesForDay($user, Carbon $date)
+    {
+        $dayName = strtolower($date->englishDayOfWeek);
+
+        // Check new schedule format first
+        if (!empty($user->schedule) && is_array($user->schedule) && isset($user->schedule[$dayName])) {
+            return [
+                'entry' => $user->schedule[$dayName]['entry'] ?? self::DEFAULT_ENTRY_TIME,
+                'exit' => $user->schedule[$dayName]['exit'] ?? self::DEFAULT_EXIT_TIME
+            ];
+        }
+
+        // Fallback to old format
+        return [
+            'entry' => $user->entry_time ?? self::DEFAULT_ENTRY_TIME,
+            'exit' => $user->exit_time ?? self::DEFAULT_EXIT_TIME
+        ];
+    }
     
     public function index()
     {
@@ -70,12 +112,16 @@ class AttendanceController extends Controller
             
             $user = Auth::user();
             $now = Carbon::now();
-            
-            // Verificar se é um dia útil (segunda a sexta)
-            if ($now->isWeekend()) {
+
+            // Verificar se o usuário pode registrar ponto neste dia
+            if (!$this->isAllowedDay($user, $now)) {
+                $allowedDaysText = empty($user->days_of_week)
+                    ? 'dias úteis (segunda a sexta)'
+                    : implode(', ', array_map('ucfirst', $user->days_of_week));
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Registros de ponto só são permitidos em dias úteis (segunda a sexta).'
+                    'message' => "Registros de ponto só são permitidos em: {$allowedDaysText}."
                 ]);
             }
             
@@ -86,29 +132,18 @@ class AttendanceController extends Controller
                 ->first();
             
             $punchType = $existingRecord && $existingRecord->entry_time ? 'exit' : 'entry';
-            $expectedTime = $punchType === 'entry' ? self::ENTRY_TIME : self::EXIT_TIME;
+            // Get day-specific times
+            $times = $this->getTimesForDay($user, $now);
+            $expectedTime = $punchType === 'entry' ? $times['entry'] : $times['exit'];
             $expectedDateTime = Carbon::parse($today . ' ' . $expectedTime);
             
             // Calcular diferença em minutos
             $minutesDifference = $now->diffInMinutes($expectedDateTime, false);
             $isEarly = $minutesDifference > 0;
             $isLate = $minutesDifference < -self::TOLERANCE_MINUTES;
-            
-            // Validar justificativa se necessário
+
+            // Justificativa é opcional
             $justification = $request->input('justification');
-            if (($isEarly || $isLate) && empty($justification)) {
-                return response()->json([
-                    'success' => false,
-                    'requires_justification' => true,
-                    'message' => $isEarly ? 
-                        'Você está batendo o ponto antes do horário. Deseja continuar e fornecer uma justificativa?' :
-                        'Você está batendo o ponto após o horário permitido. Deseja continuar e fornecer uma justificativa?',
-                    'punch_type' => $punchType,
-                    'expected_time' => $expectedTime,
-                    'current_time' => $now->format('H:i'),
-                    'minutes_difference' => abs($minutesDifference)
-                ]);
-            }
             
             if ($existingRecord) {
                 // Registrar saída
@@ -186,13 +221,17 @@ class AttendanceController extends Controller
             
             $user = Auth::user();
             $now = Carbon::now();
-            
-            // Verificar se é dia útil
-            if ($now->isWeekend()) {
+
+            // Verificar se o usuário pode registrar ponto neste dia
+            if (!$this->isAllowedDay($user, $now)) {
+                $allowedDaysText = empty($user->days_of_week)
+                    ? 'dias úteis (segunda a sexta)'
+                    : implode(', ', array_map('ucfirst', $user->days_of_week));
+
                 return response()->json([
                     'success' => true,
-                    'is_weekend' => true,
-                    'message' => 'Hoje é fim de semana. Registros não são necessários.'
+                    'is_not_allowed_day' => true,
+                    'message' => "Hoje não é um dia de registro. Seus dias são: {$allowedDaysText}."
                 ]);
             }
         
@@ -203,8 +242,10 @@ class AttendanceController extends Controller
             ->first();
         
         $nextPunchType = $todayRecord && $todayRecord->entry_time ? 'exit' : 'entry';
-        $expectedTime = $nextPunchType === 'entry' ? self::ENTRY_TIME : self::EXIT_TIME;
-        
+        // Get day-specific times
+        $times = $this->getTimesForDay($user, $now);
+        $expectedTime = $nextPunchType === 'entry' ? $times['entry'] : $times['exit'];
+
         return response()->json([
                 'success' => true,
                 'today_record' => $todayRecord ? [
@@ -216,8 +257,8 @@ class AttendanceController extends Controller
                 'expected_time' => $expectedTime,
                 'current_time' => $now->format('H:i'),
                 'work_hours' => [
-                    'entry' => self::ENTRY_TIME,
-                    'exit' => self::EXIT_TIME
+                    'entry' => $times['entry'],
+                    'exit' => $times['exit']
                 ]
             ]);
         } catch (\Exception $e) {
@@ -307,11 +348,16 @@ class AttendanceController extends Controller
         
         // Usar a mesma lógica do registerAttendance
         $now = Carbon::now();
-        
-        if ($now->isWeekend()) {
+
+        // Verificar se o usuário pode registrar ponto neste dia
+        if (!$this->isAllowedDay($user, $now)) {
+            $allowedDaysText = empty($user->days_of_week)
+                ? 'dias úteis (segunda a sexta)'
+                : implode(', ', array_map('ucfirst', $user->days_of_week));
+
             return response()->json([
                 'success' => false,
-                'message' => 'Registros de ponto só são permitidos em dias úteis (segunda a sexta).'
+                'message' => "Registros de ponto só são permitidos em: {$allowedDaysText}."
             ]);
         }
         
@@ -321,9 +367,11 @@ class AttendanceController extends Controller
             ->first();
         
         $punchType = $existingRecord && $existingRecord->entry_time ? 'exit' : 'entry';
-        $expectedTime = $punchType === 'entry' ? self::ENTRY_TIME : self::EXIT_TIME;
+        // Get day-specific times
+        $times = $this->getTimesForDay($user, $now);
+        $expectedTime = $punchType === 'entry' ? $times['entry'] : $times['exit'];
         $expectedDateTime = Carbon::parse($today . ' ' . $expectedTime);
-        
+
         $minutesDifference = $now->diffInMinutes($expectedDateTime, false);
         $isEarly = $minutesDifference > 0;
         $isLate = $minutesDifference < -self::TOLERANCE_MINUTES;
@@ -397,34 +445,64 @@ class AttendanceController extends Controller
     {
         try {
             $now = Carbon::now();
-            
-            if ($now->isWeekend()) {
-                return 'Próxima segunda-feira às ' . self::ENTRY_TIME;
+            $user = User::find($userId);
+
+            // Check if today is an allowed day
+            if (!$this->isAllowedDay($user, $now)) {
+                // Find next allowed day
+                $nextDay = $now->copy()->addDay();
+                $daysChecked = 0;
+
+                while (!$this->isAllowedDay($user, $nextDay) && $daysChecked < 7) {
+                    $nextDay->addDay();
+                    $daysChecked++;
+                }
+
+                if ($daysChecked < 7) {
+                    $nextDayTimes = $this->getTimesForDay($user, $nextDay);
+                    $dayName = $nextDay->locale('pt_BR')->dayName;
+                    return ucfirst($dayName) . ' às ' . $nextDayTimes['entry'];
+                }
+
+                return 'Nenhum dia disponível';
             }
-            
+
+            // Get today's times
+            $times = $this->getTimesForDay($user, $now);
+
             $today = $now->format('Y-m-d');
             $lastRecord = AttendanceRecord::where('user_id', $userId)
                 ->whereDate('created_at', $today)
                 ->first();
-            
+
             if (!$lastRecord || !$lastRecord->entry_time) {
-                return self::ENTRY_TIME . ' (Entrada)';
+                return $times['entry'] . ' (Entrada)';
             }
-            
+
             if (!$lastRecord->exit_time) {
-                return self::EXIT_TIME . ' (Saída)';
+                return $times['exit'] . ' (Saída)';
             }
-            
-            // Se já registrou entrada e saída hoje
-            $tomorrow = $now->addDay();
-            if ($tomorrow->isWeekend()) {
-                return 'Próxima segunda-feira às ' . self::ENTRY_TIME;
+
+            // Se já registrou entrada e saída hoje, buscar próximo dia permitido
+            $nextDay = $now->copy()->addDay();
+            $daysChecked = 0;
+
+            while (!$this->isAllowedDay($user, $nextDay) && $daysChecked < 7) {
+                $nextDay->addDay();
+                $daysChecked++;
             }
-            
-            return 'Amanhã às ' . self::ENTRY_TIME;
+
+            if ($daysChecked < 7) {
+                $nextDayTimes = $this->getTimesForDay($user, $nextDay);
+                $dayName = $nextDay->locale('pt_BR')->dayName;
+                $prefix = $daysChecked === 0 ? 'Amanhã' : ucfirst($dayName);
+                return $prefix . ' às ' . $nextDayTimes['entry'];
+            }
+
+            return 'Nenhum dia disponível';
         } catch (\Exception $e) {
             \Log::error('Erro ao calcular próximo registro: ' . $e->getMessage());
-            return self::ENTRY_TIME;
+            return self::DEFAULT_ENTRY_TIME;
         }
     }
     

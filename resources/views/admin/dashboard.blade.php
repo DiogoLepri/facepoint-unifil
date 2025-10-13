@@ -20,7 +20,7 @@
     .stat-number {
         font-size: 2.5rem;
         font-weight: bold;
-        color: #f08223;
+        color: #ffffff;
     }
     .stat-label {
         font-size: 0.9rem;

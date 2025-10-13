@@ -189,16 +189,39 @@
             <div class="work-hours">
                 <div style="margin-top: 5px;">
                     <strong style="color: #1976d2; font-size: 1.1rem;">Horário de Estudo</strong><br>
-                    <span class="text-primary" style="font-size: 1.15rem; font-weight: 600;">14:00 às 18:00</span>
-                    <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">(Segunda a Sexta)</div>
+
+                    @if(count($scheduleFormatted) > 0)
+                        <div style="margin-top: 10px;">
+                            @foreach($scheduleFormatted as $schedule)
+                                <div style="font-size: 0.95rem; margin: 5px 0; padding: 5px 0; border-bottom: 1px dashed #e0e0e0;">
+                                    <strong style="color: #1976d2;">{{ $schedule['day'] }}:</strong>
+                                    <span style="color: #333; font-weight: 600;">{{ $schedule['entry'] }} às {{ $schedule['exit'] }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <span class="text-primary" style="font-size: 1.15rem; font-weight: 600;">{{ $entryTime }} às {{ $exitTime }}</span>
+                        <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">(Segunda a Sexta)</div>
+                    @endif
                 </div>
             </div>
             
             <div class="mt-4">
-                <button type="button" class="punch-btn" id="punch-clock-btn">
+                <button type="button" class="punch-btn" id="punch-clock-btn" {{ !$isAllowedToday ? 'disabled' : '' }}>
                     BATER<br>PONTO
                 </button>
             </div>
+
+            @if(!$isAllowedToday)
+            <div class="mt-2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> Hoje não é um dia de registro.
+                    @if(count($scheduleFormatted) > 0)
+                        <br>Seus dias: {{ implode(', ', array_column($scheduleFormatted, 'day')) }}
+                    @endif
+                </small>
+            </div>
+            @endif
             
             <div class="mt-3" style="background: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid #f08223;">
                 <div style="font-size: 0.95rem; color: #495057;">
@@ -309,11 +332,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const punchBtn = document.getElementById('punch-clock-btn');
-    const confirmModal = new bootstrap.Modal(document.getElementById('punchConfirmModal'));
-    const confirmBtn = document.getElementById('confirm-punch-btn');
-    const justificationSection = document.getElementById('justification-section');
-    const justificationInput = document.getElementById('justification');
-    
+
     let currentPunchData = null;
     
     // Atualizar relógio
@@ -346,25 +365,33 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 const statusElement = document.getElementById('punch-status');
-                
+
+                // Check if today is not an allowed day
+                if (data.is_not_allowed_day) {
+                    statusElement.innerHTML = '<span style="color: #6c757d;">📅 Hoje não é um dia de registro</span>';
+                    punchBtn.disabled = true;
+                    punchBtn.style.opacity = '0.6';
+                    return;
+                }
+
                 if (data.is_weekend) {
                     statusElement.innerHTML = '<span style="color: #6c757d;">🏖️ Fim de semana - Descanso</span>';
                     punchBtn.disabled = true;
                     punchBtn.style.opacity = '0.6';
                     return;
                 }
-                
+
                 const nextType = data.next_punch_type === 'entry' ? 'Entrada' : 'Saída';
                 statusElement.innerHTML = `<span style="color: #28a745;">Próximo: ${nextType} (${data.expected_time})</span>`;
-                
+
                 if (data.today_record) {
                     if (data.today_record.entry_time && data.today_record.exit_time) {
-                        statusElement.innerHTML = '<span style="color: #28a745;">Já registrou entrada e saída hoje</span>';
+                        statusElement.innerHTML = '<span style="color: #28a745;">✅ Já registrou entrada e saída hoje</span>';
                         punchBtn.disabled = true;
                         punchBtn.style.opacity = '0.6';
                     }
                 }
-                
+
                 // Habilitar botão se não estiver desabilitado
                 if (!punchBtn.disabled) {
                     punchBtn.style.opacity = '1';
@@ -420,13 +447,10 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             currentPunchData = data;
-            
+
             if (data.success) {
-                // Registro bem-sucedido - mostrar confirmação simples
-                showSimpleConfirmation(data);
-            } else if (data.requires_justification) {
-                // Precisa de justificativa - mostrar modal
-                showJustificationModal(data);
+                // Registro bem-sucedido - mostrar mensagem e recarregar
+                showSuccessMessage(data);
             } else {
                 // Erro - mostrar mensagem
                 showErrorMessage(data.message || 'Erro ao registrar ponto');
@@ -470,143 +494,44 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
     
-    function showSimpleConfirmation(data) {
-        // Preencher modal com dados
-        document.getElementById('expected-time').textContent = '14:00'; // ou 18:00 baseado no tipo
-        document.getElementById('punch-type-text').textContent = data.punch_type === 'entry' ? 'Entrada' : 'Saída';
-        document.getElementById('modal-punch-type').textContent = data.punch_type === 'entry' ? 'Entrada' : 'Saída';
-        
-        // Esconder seção de justificativa
-        justificationSection.style.display = 'none';
-        document.getElementById('time-difference-info').style.display = 'none';
+    function showSuccessMessage(data) {
+        const successDiv = document.createElement('div');
+        successDiv.className = 'alert alert-success alert-dismissible fade show';
+        successDiv.style.position = 'fixed';
+        successDiv.style.top = '20px';
+        successDiv.style.right = '20px';
+        successDiv.style.zIndex = '9999';
+        successDiv.style.minWidth = '350px';
+        successDiv.style.maxWidth = '500px';
 
-        confirmModal.show();
+        let statusMessage = '';
+        if (data.is_early) {
+            statusMessage = '<div class="mt-2"><small class="text-info"><i class="fas fa-info-circle"></i> Registro adiantado</small></div>';
+        } else if (data.is_late) {
+            statusMessage = '<div class="mt-2"><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Registro atrasado</small></div>';
+        }
+
+        successDiv.innerHTML = `
+            <strong><i class="fas fa-check-circle"></i> Sucesso!</strong> ${data.message || 'Ponto registrado com sucesso!'}
+            ${statusMessage}
+            <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+        `;
+        document.body.appendChild(successDiv);
+
+        // Recarregar a página para atualizar os dados
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
     }
     
-    function showJustificationModal(data) {
-        // Preencher modal com dados
-        document.getElementById('expected-time').textContent = data.expected_time;
-        document.getElementById('punch-type-text').textContent = data.punch_type === 'entry' ? 'Entrada' : 'Saída';
-        document.getElementById('modal-punch-type').textContent = data.punch_type === 'entry' ? 'Entrada' : 'Saída';
-        
-        // Mostrar diferença de tempo
-        const timeDiffElement = document.getElementById('time-difference-info');
-        const isEarly = data.current_time < data.expected_time;
-        const isLate = data.current_time > data.expected_time;
-        
-        if (isEarly) {
-            timeDiffElement.textContent = `Você está ${data.minutes_difference} minutos adiantado`;
-            timeDiffElement.className = 'time-difference early';
-        } else if (isLate) {
-            timeDiffElement.textContent = `Você está ${data.minutes_difference} minutos atrasado`;
-            timeDiffElement.className = 'time-difference late';
-        }
-        
-        timeDiffElement.style.display = 'block';
-        
-        // Mostrar seção de justificativa
-        justificationSection.style.display = 'block';
-        justificationInput.value = '';
-        justificationInput.required = true;
-        
-        confirmModal.show();
-    }
-    
-    // Confirmação final
-    confirmBtn.addEventListener('click', function() {
-        const justification = justificationInput.value.trim();
-        
-        // Verificar se justificativa é necessária
-        if (justificationSection.style.display !== 'none' && !justification) {
-            alert('Justificativa é obrigatória para horários irregulares');
-            return;
-        }
-        
-        confirmBtn.disabled = true;
-        confirmBtn.textContent = 'Registrando...';
-        
-        // Fazer registro final com timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-            controller.abort();
-            showErrorMessage('Timeout durante o registro');
-            confirmBtn.disabled = false;
-            confirmBtn.textContent = 'Confirmar';
-        }, 15000);
-        
-        fetch('/register-attendance', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                justification: justification
-            }),
-            signal: controller.signal
-        })
-        .then(response => {
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                confirmModal.hide();
-                
-                // Mostrar mensagem de sucesso
-                const successDiv = document.createElement('div');
-                successDiv.className = 'alert alert-success alert-dismissible fade show';
-                successDiv.style.position = 'fixed';
-                successDiv.style.top = '20px';
-                successDiv.style.right = '20px';
-                successDiv.style.zIndex = '9999';
-                successDiv.style.minWidth = '300px';
-                successDiv.innerHTML = `
-                    <strong>Sucesso:</strong> ${data.message || 'Ponto registrado com sucesso!'}
-                    <button type=\"button\" class=\"btn-close\" onclick=\"this.parentElement.remove()\"></button>
-                `;
-                document.body.appendChild(successDiv);
-                
-                // Recarregar a página para atualizar os dados
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
-            } else {
-                showErrorMessage(data.message || 'Erro ao registrar ponto');
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Confirmar';
-            }
-        })
-        .catch(error => {
-            clearTimeout(timeoutId);
-            console.error('Erro:', error);
-            
-            if (error.name === 'AbortError') {
-                showErrorMessage('Operação cancelada por timeout');
-            } else {
-                showErrorMessage('Erro de comunicação com o servidor');
-            }
-            confirmBtn.disabled = false;
-            confirmBtn.textContent = 'Confirmar';
-        });
-    });
+    // Note: confirmBtn listener removed as we no longer use the confirmation modal
     
     function resetPunchButton() {
         punchBtn.disabled = false;
         punchBtn.innerHTML = 'BATER<br>PONTO';
     }
     
-    // Reset do modal quando fechado
-    document.getElementById('punchConfirmModal').addEventListener('hidden.bs.modal', function() {
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Confirmar';
-        resetPunchButton();
-    });
+    // Note: Modal reset removed as we no longer use the confirmation modal
     
     // Inicializar
     updateClock();
