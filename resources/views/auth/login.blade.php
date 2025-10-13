@@ -6,8 +6,8 @@
 <style>
     html, body {
         background-color: #f5f5f5;
-        overflow-x: hidden;
         height: 100%;
+        overflow-x: hidden;
     }
     
     .navbar {
@@ -166,10 +166,16 @@
     
     .footer {
         text-align: center;
-        margin-top: 40px;
+        margin-top: auto;
         padding: 20px 0;
         color: #666;
         font-size: 0.85rem;
+        width: 100vw;
+        position: relative;
+        left: 50%;
+        right: 50%;
+        margin-left: -50vw;
+        margin-right: -50vw;
     }
     
     .cadastre-link {
