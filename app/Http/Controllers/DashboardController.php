@@ -6,7 +6,6 @@ use App\Models\AttendanceRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -54,32 +53,6 @@ class DashboardController extends Controller
             'scheduleFormatted',
             'isAllowedToday'
         ));
-    }
-
-    /**
-     * Format days of week to Portuguese
-     */
-    private function formatDaysOfWeek($days)
-    {
-        if (empty($days)) {
-            return 'Segunda a Sexta';
-        }
-
-        $dayNames = [
-            'monday' => 'Segunda',
-            'tuesday' => 'Terça',
-            'wednesday' => 'Quarta',
-            'thursday' => 'Quinta',
-            'friday' => 'Sexta',
-            'saturday' => 'Sábado',
-            'sunday' => 'Domingo'
-        ];
-
-        $formattedDays = array_map(function($day) use ($dayNames) {
-            return $dayNames[strtolower($day)] ?? $day;
-        }, $days);
-
-        return implode(', ', $formattedDays);
     }
 
     /**
@@ -257,52 +230,93 @@ class DashboardController extends Controller
             return '0%'; // Valor padrão em caso de erro
         }
     }
-    
+
     // Método para calcular o próximo horário de registro esperado
     private function getNextRegisterTime($userId)
     {
         try {
-            // Verificar o último registro do usuário
-            $lastRecord = AttendanceRecord::where('user_id', $userId)
-                ->whereDate('created_at', now()->format('Y-m-d'))
-                ->orderBy('created_at', 'desc')
-                ->first();
-            
-            // Horários padrão de trabalho
-            $morningStart = '08:00';
-            $lunchStart = '12:00';
-            $lunchEnd = '13:00';
-            $eveningEnd = '17:00';
-            
-            // Horário atual
             $now = Carbon::now();
-            $hour = (int)$now->format('H');
-            
-            if (!$lastRecord) {
-                // Se não houver registro hoje, próximo é a entrada
-                return $morningStart;
+            $user = \App\Models\User::find($userId);
+
+            // Check if today is an allowed day
+            if (!$this->isAllowedDay($user, $now)) {
+                // Find next allowed day
+                $nextDay = $now->copy()->addDay();
+                $daysChecked = 0;
+
+                while (!$this->isAllowedDay($user, $nextDay) && $daysChecked < 7) {
+                    $nextDay->addDay();
+                    $daysChecked++;
+                }
+
+                if ($daysChecked < 7) {
+                    $nextDayTimes = $this->getTimesForDay($user, $nextDay);
+                    $dayName = $nextDay->locale('pt_BR')->dayName;
+                    return ucfirst($dayName) . ' às ' . $nextDayTimes['entry'];
+                }
+
+                return 'Nenhum dia disponível';
             }
-            
-            // Lógica para determinar o próximo registro esperado
+
+            // Get today's times
+            $times = $this->getTimesForDay($user, $now);
+
+            $today = $now->format('Y-m-d');
+            $lastRecord = AttendanceRecord::where('user_id', $userId)
+                ->whereDate('created_at', $today)
+                ->first();
+
+            if (!$lastRecord || !$lastRecord->entry_time) {
+                return $times['entry'] . ' (Entrada)';
+            }
+
             if (!$lastRecord->exit_time) {
-                // Se registrou entrada pela manhã, próximo registro é a saída para almoço
-                if ($hour < 12) {
-                    return $lunchStart;
-                }
-                // Se registrou entrada após o almoço, próximo registro é a saída do dia
-                return $eveningEnd;
-            } else {
-                // Se registrou saída antes das 13h, é provável que seja para almoço, então próximo é retorno do almoço
-                if ($hour < 13) {
-                    return $lunchEnd;
-                }
-                // Se registrou saída após as 17h, provavelmente é a saída do dia, então próximo é entrada do dia seguinte
-                return $morningStart;
+                return $times['exit'] . ' (Saída)';
             }
+
+            // Se já registrou entrada e saída hoje, buscar próximo dia permitido
+            $nextDay = $now->copy()->addDay();
+            $daysChecked = 0;
+
+            while (!$this->isAllowedDay($user, $nextDay) && $daysChecked < 7) {
+                $nextDay->addDay();
+                $daysChecked++;
+            }
+
+            if ($daysChecked < 7) {
+                $nextDayTimes = $this->getTimesForDay($user, $nextDay);
+                $dayName = $nextDay->locale('pt_BR')->dayName;
+                $prefix = $daysChecked === 0 ? 'Amanhã' : ucfirst($dayName);
+                return $prefix . ' às ' . $nextDayTimes['entry'];
+            }
+
+            return 'Nenhum dia disponível';
         } catch (\Exception $e) {
             \Log::error('Erro ao calcular próximo registro: ' . $e->getMessage());
-            return '08:00'; // Valor padrão em caso de erro
+            return '14:00';
         }
+    }
+
+    /**
+     * Get entry and exit times for a specific day
+     */
+    private function getTimesForDay($user, Carbon $date)
+    {
+        $dayName = strtolower($date->englishDayOfWeek);
+
+        // Check new schedule format first
+        if (!empty($user->schedule) && is_array($user->schedule) && isset($user->schedule[$dayName])) {
+            return [
+                'entry' => $user->schedule[$dayName]['entry'] ?? '14:00',
+                'exit' => $user->schedule[$dayName]['exit'] ?? '18:00'
+            ];
+        }
+
+        // Fallback to old format
+        return [
+            'entry' => $user->entry_time ?? '14:00',
+            'exit' => $user->exit_time ?? '18:00'
+        ];
     }
     
     // Método auxiliar para contar dias úteis no mês

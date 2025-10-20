@@ -211,7 +211,7 @@
                     BATER<br>PONTO
                 </button>
             </div>
-            
+
             <div class="mt-3" style="background: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid #f08223;">
                 <div style="font-size: 0.95rem; color: #495057;">
                     <strong style="color: #f08223;">Status:</strong> 
@@ -357,14 +357,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Check if today is not an allowed day
                 if (data.is_not_allowed_day) {
-                    statusElement.innerHTML = '<span style="color: #6c757d;">📅 Hoje não é um dia de registro</span>';
+                    statusElement.innerHTML = '<span style="color: #6c757d;">Hoje não é um dia de registro</span>';
                     punchBtn.disabled = true;
                     punchBtn.style.opacity = '0.6';
                     return;
                 }
 
                 if (data.is_weekend) {
-                    statusElement.innerHTML = '<span style="color: #6c757d;">🏖️ Fim de semana - Descanso</span>';
+                    statusElement.innerHTML = '<span style="color: #6c757d;"> Fim de semana - Descanso</span>';
                     punchBtn.disabled = true;
                     punchBtn.style.opacity = '0.6';
                     return;
@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (data.today_record) {
                     if (data.today_record.entry_time && data.today_record.exit_time) {
-                        statusElement.innerHTML = '<span style="color: #28a745;">✅ Já registrou entrada e saída hoje</span>';
+                        statusElement.innerHTML = '<span style="color: #28a745;">Já registrou entrada e saída hoje</span>';
                         punchBtn.disabled = true;
                         punchBtn.style.opacity = '0.6';
                     }

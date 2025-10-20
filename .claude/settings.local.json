@@ -17,7 +17,15 @@
       "Bash(git checkout:*)",
       "Bash(cat:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(git log -p --all -S \"ADMIN_EMAIL\" -- .env)"
+      "Bash(git log -p --all -S \"ADMIN_EMAIL\" -- .env)",
+      "Bash(test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nMerge remote changes with local backup\n\nMerged remote commit ''Simplified the code'' with local ''Backup 20/10''.\nResolved conflicts in:\n- .claude/settings.local.json (kept both permissions)\n- resources/views/aluno/dashboard.blade.php (kept cleaner formatting)\n\nThis merge combines:\n- Remote: Added profile view, soft deletes, admin improvements\n- Local: Database state and configuration updates\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git stash pop:*)",
+      "Bash(git commit:*)",
+      "Bash(git stash drop:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

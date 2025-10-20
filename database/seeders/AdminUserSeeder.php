@@ -13,24 +13,30 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
+        // Get admin credentials from environment variables
+        $adminEmail = env('ADMIN_EMAIL', 'admin@facepoint.com');
+        $adminPassword = env('ADMIN_PASSWORD', 'admin123');
+        $adminName = env('ADMIN_NAME', 'Administrator');
+        $adminMatricula = env('ADMIN_MATRICULA', '000000000');
+
         // Check if admin user already exists
-        $existingAdmin = User::where('email', 'joao.andrade@unifil.br')->first();
-        
+        $existingAdmin = User::where('email', $adminEmail)->first();
+
         if (!$existingAdmin) {
             User::create([
-                'name' => 'João Andrade',
-                'email' => 'joao.andrade@unifil.br',
-                'matricula' => '000000001', // Special admin matricula
+                'name' => $adminName,
+                'email' => $adminEmail,
+                'matricula' => $adminMatricula,
                 'curso' => 'Administração do Sistema',
-                'password' => Hash::make('Admin@2025!UniFil'), // Secure password
+                'password' => Hash::make($adminPassword),
                 'role' => 'admin',
                 'email_verified_at' => now(),
             ]);
-            
+
             $this->command->info('Admin user created successfully!');
-            $this->command->info('Email: joao.andrade@unifil.br');
-            $this->command->info('Password:Admin@2025!UniFil ');
-            $this->command->warn('IMPORTANT: Please share this password securely with the admini1strator and consider changing it after first login.');
+            $this->command->info('Email: ' . $adminEmail);
+            $this->command->info('Password: ' . $adminPassword);
+            $this->command->warn('IMPORTANT: These credentials are stored in your .env file. Share securely and change after first login.');
         } else {
             $this->command->info('Admin user already exists.');
         }

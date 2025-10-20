@@ -7,7 +7,6 @@ use App\Models\AttendanceRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
 {
@@ -57,29 +56,6 @@ class AttendanceController extends Controller
             'exit' => $user->exit_time ?? self::DEFAULT_EXIT_TIME
         ];
     }
-    
-    public function index()
-    {
-        $user = Auth::user();
-        
-        // Obter os últimos registros do usuário
-        $attendances = AttendanceRecord::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->take(10)
-            ->get();
-        
-        // Calcular horas registradas
-        $hoursRegistered = $this->calculateHoursRegistered($user->id);
-        
-        // Calcular frequência
-        $attendance = $this->calculateAttendancePercentage($user->id);
-        
-        // Determinar próximo registro
-        $nextRegister = $this->getNextRegisterTime($user->id);
-        
-        return view('aluno.dashboard', compact('attendances', 'hoursRegistered', 'attendance', 'nextRegister'));
-    }
-    
     public function create()
     {
         return view('aluno.registro-ponto');
@@ -429,17 +405,6 @@ class AttendanceController extends Controller
             ]
         ]);
     }
-    
-    public function registerFromDashboard(Request $request)
-    {
-        return $this->registerAttendance($request);
-    }
-    
-    public function store(Request $request)
-    {
-        return $this->registerAttendance($request);
-    }
-    
     // Método para calcular o próximo horário de registro esperado
     private function getNextRegisterTime($userId)
     {

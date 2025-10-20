@@ -223,18 +223,4 @@ class DashboardController extends Controller
         
         return "relatorio_{$periodName}_{$dateStr}.pdf";
     }
-    
-    
-    public function config()
-    {
-        return view('admin.config');
-    }
-    
-    public function updateConfig(Request $request)
-    {
-        // Implementar atualização de configurações
-        // ...
-        
-        return back()->with('success', 'Configurações atualizadas com sucesso!');
-    }
 }

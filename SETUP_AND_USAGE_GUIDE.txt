@@ -1,0 +1,300 @@
+================================================================================
+FACEPOINT UNIFIL - SETUP AND USAGE GUIDE
+================================================================================
+
+This guide explains the new features and how to use them for your presentation.
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+
+1. Admin Credentials Management
+2. User Soft Delete (Inactivate/Reactivate)
+3. Important Notes for Presentation
+4. Troubleshooting
+
+================================================================================
+1. ADMIN CREDENTIALS MANAGEMENT
+================================================================================
+
+WHAT CHANGED:
+-------------
+Admin credentials are no longer hardcoded in the system. They are now stored
+securely in the .env file, making it easy to share and change.
+
+WHERE TO FIND THE CREDENTIALS:
+------------------------------
+Open the file: .env (in the project root folder)
+
+Look for this section:
+    # Admin User Credentials
+    ADMIN_NAME="Administrator"
+    ADMIN_EMAIL="admin@facepoint.com"
+    ADMIN_PASSWORD="admin123"
+    ADMIN_MATRICULA="000000000"
+
+HOW TO CHANGE ADMIN CREDENTIALS:
+---------------------------------
+1. Open the .env file in any text editor
+2. Change the values as needed:
+   - ADMIN_EMAIL: The email used to login
+   - ADMIN_PASSWORD: The password used to login
+   - ADMIN_NAME: The admin's display name
+   - ADMIN_MATRICULA: The admin's matricula number
+
+3. Save the file
+
+4. Open terminal in project folder and run:
+   php artisan config:clear
+   php artisan db:seed --class=AdminUserSeeder
+
+5. Done! Use the new credentials to login
+
+EXAMPLE - CHANGING FOR PRESENTATION:
+-------------------------------------
+If you want to change to:
+    Email: joao.admin@unifil.br
+    Password: UniFil2025!
+
+Edit .env file:
+    ADMIN_EMAIL="joao.admin@unifil.br"
+    ADMIN_PASSWORD="UniFil2025!"
+
+Then run:
+    php artisan config:clear
+    php artisan db:seed --class=AdminUserSeeder
+
+SECURITY TIP:
+-------------
+- Never commit the .env file to Git (it's already in .gitignore)
+- Share credentials securely (not via email or public channels)
+- Change the default password after first login
+
+================================================================================
+2. USER SOFT DELETE (INACTIVATE/REACTIVATE)
+================================================================================
+
+WHAT IS SOFT DELETE?
+--------------------
+Instead of permanently deleting users from the database, you can now:
+- INACTIVATE users (they are hidden but data is preserved)
+- REACTIVATE inactive users (restore them)
+- PERMANENTLY DELETE if needed (removes all data - use with caution!)
+
+HOW TO USE:
+-----------
+
+VIEWING USERS:
+--------------
+1. Login as admin
+2. Go to: Admin Dashboard > Alunos
+3. You'll see all users with their status:
+   - Green badge = Active user
+   - Red badge = Inactive user
+
+FILTERING USERS:
+----------------
+Use the dropdown filter to view:
+- "Todos os usuários" - Shows active AND inactive users
+- "Apenas ativos" - Shows only active users
+- "Apenas inativos" - Shows only inactive users
+
+INACTIVATING A USER:
+--------------------
+1. Find the active user in the list
+2. Click the "Inativar" button (warning icon)
+3. Confirm the action
+4. User is now inactive (data is preserved!)
+
+REACTIVATING A USER:
+--------------------
+1. Filter by "Apenas inativos" to see inactive users
+2. Find the user you want to restore
+3. Click the "Reativar" button (undo icon)
+4. User is now active again!
+
+PERMANENTLY DELETING A USER:
+----------------------------
+⚠️ WARNING: This cannot be undone!
+
+1. First, inactivate the user
+2. Filter by "Apenas inativos"
+3. Find the inactive user
+4. Click the "Excluir" button (trash icon)
+5. Read the warning carefully
+6. Confirm if you're absolutely sure
+7. User and ALL their data is permanently removed
+
+WHAT HAPPENS WHEN YOU INACTIVATE:
+----------------------------------
+✅ User data is preserved
+✅ Facial recognition records are kept
+✅ Attendance history is kept
+✅ User cannot login
+✅ User appears in reports as inactive
+✅ Can be restored anytime
+
+WHAT HAPPENS WHEN YOU PERMANENTLY DELETE:
+------------------------------------------
+❌ User is removed from database
+❌ All facial recognition data is deleted
+❌ All profile images are deleted
+❌ Cannot be restored
+❌ Use only if you're 100% sure!
+
+================================================================================
+3. IMPORTANT NOTES FOR PRESENTATION
+================================================================================
+
+BEFORE YOUR PRESENTATION:
+-------------------------
+1. Make sure you have the correct admin credentials
+2. Test the login with admin account
+3. Have at least 2-3 test student accounts
+4. Practice inactivating and reactivating a user
+
+WHAT TO DEMONSTRATE:
+--------------------
+✅ Admin login with credentials from .env file
+✅ Show the user management page
+✅ Demonstrate filtering (All/Active/Inactive)
+✅ Inactivate a test user
+✅ Show that inactive users have different badge and buttons
+✅ Reactivate the user
+✅ Explain the difference between inactivate and permanent delete
+
+TALKING POINTS:
+---------------
+1. Security:
+   - "Admin credentials are stored in environment variables"
+   - "This makes it easy to change without touching the code"
+   - "Perfect for production environments"
+
+2. Soft Delete:
+   - "We don't permanently delete users by default"
+   - "This preserves all historical data"
+   - "Important for audit trails and reporting"
+   - "Users can be reactivated if needed"
+
+3. Flexibility:
+   - "Admins have three options: Edit, Inactivate, or Permanently Delete"
+   - "The system is designed to prevent accidental data loss"
+
+COMMON QUESTIONS TO PREPARE FOR:
+---------------------------------
+Q: Why not just delete users?
+A: Preserving data is important for reports, attendance history, and audit
+   trails. Soft delete allows us to maintain data integrity.
+
+Q: What happens to attendance records when a user is inactivated?
+A: All attendance records are preserved. They can still be viewed in reports.
+
+Q: Can an inactive user login?
+A: No, inactive users cannot login to the system.
+
+Q: How do we know if a user is inactive?
+A: The status badge shows red "Inativo" and they appear when filtering by
+   inactive users.
+
+================================================================================
+4. TROUBLESHOOTING
+================================================================================
+
+ISSUE: Admin credentials not working after changing .env
+SOLUTION:
+    php artisan config:clear
+    php artisan cache:clear
+    php artisan db:seed --class=AdminUserSeeder
+
+ISSUE: Can't see inactive users
+SOLUTION:
+    Use the filter dropdown and select "Apenas inativos" or "Todos os usuários"
+
+ISSUE: Buttons not showing correctly
+SOLUTION:
+    php artisan view:clear
+    Refresh the browser with Ctrl+F5 (hard refresh)
+
+ISSUE: Migration not applied
+SOLUTION:
+    php artisan migrate:status
+    If you see "Pending", run: php artisan migrate
+
+ISSUE: Routes not found
+SOLUTION:
+    php artisan route:clear
+    php artisan route:cache
+
+================================================================================
+QUICK REFERENCE - USEFUL COMMANDS
+================================================================================
+
+Clear all caches:
+    php artisan config:clear
+    php artisan cache:clear
+    php artisan view:clear
+    php artisan route:clear
+
+Check migration status:
+    php artisan migrate:status
+
+Run migrations:
+    php artisan migrate
+
+Seed admin user:
+    php artisan db:seed --class=AdminUserSeeder
+
+View all routes:
+    php artisan route:list
+
+Check application status:
+    php artisan about
+
+================================================================================
+FILES MODIFIED IN THIS UPDATE
+================================================================================
+
+Configuration:
+    .env - Added admin credentials
+
+Database:
+    database/migrations/2025_10_13_193637_add_soft_deletes_to_users_table.php
+    database/seeders/AdminUserSeeder.php
+
+Models:
+    app/Models/User.php - Added SoftDeletes trait
+
+Controllers:
+    app/Http/Controllers/Admin/UserController.php - Added soft delete methods
+
+Views:
+    resources/views/admin/users/index.blade.php - Updated UI
+
+Routes:
+    routes/web.php - Added restore and force-destroy routes
+
+================================================================================
+SUPPORT & QUESTIONS
+================================================================================
+
+If you encounter any issues or have questions:
+
+1. Check the troubleshooting section above
+2. Review the error logs in: storage/logs/laravel.log
+3. Make sure all migrations are up to date
+4. Clear all caches and try again
+
+================================================================================
+GOOD LUCK WITH YOUR PRESENTATION!
+================================================================================
+
+Remember:
+- Be confident
+- Explain the "why" behind the features
+- Show the practical benefits
+- Handle questions professionally
+- Have fun demonstrating your work!
+
+================================================================================
+END OF GUIDE
+================================================================================

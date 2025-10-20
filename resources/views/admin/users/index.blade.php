@@ -50,18 +50,39 @@
                     <h5 class="card-title">Gerenciar Usuários</h5>
                 </div>
                 
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
+
+                @if(session('info'))
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        {{ session('info') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
+
                 <div class="row mb-4">
-                    <div class="col-md-6">
+                    <div class="col-md-5">
                         <form method="GET" action="{{ route('users.index') }}" class="d-flex">
                             <input type="text" class="form-control me-2" placeholder="Buscar por nome ou matrícula" name="search" value="{{ request('search') }}">
                             <button type="submit" class="btn btn-outline-primary">Buscar</button>
                         </form>
                     </div>
-                    <div class="col-md-6 text-end">
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-secondary">Filtrar</button>
-                            <button type="button" class="btn btn-outline-secondary">Exportar</button>
-                        </div>
+                    <div class="col-md-4">
+                        <form method="GET" action="{{ route('users.index') }}" class="d-flex">
+                            <select name="status" class="form-select me-2" onchange="this.form.submit()">
+                                <option value="">Todos os usuários</option>
+                                <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Apenas ativos</option>
+                                <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Apenas inativos</option>
+                            </select>
+                            <input type="hidden" name="search" value="{{ request('search') }}">
+                        </form>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <small class="text-muted">Total: {{ $users->total() }} usuários</small>
                     </div>
                 </div>
                 
@@ -95,20 +116,45 @@
                                 <td>{{ $user->curso }}</td>
                                 <td>{{ $user->email }}</td>
                                 <td>
-                                    @if($user->active)
-                                        <span class="badge bg-success">Ativo@else
+                                    @if($user->trashed())
                                         <span class="badge bg-danger">Inativo</span>
+                                    @else
+                                        <span class="badge bg-success">Ativo</span>
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
-                                        <form action="{{ route('users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este usuário?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
-                                        </form>
-                                    </div>
+                                    @if($user->trashed())
+                                        <!-- User is inactive - show restore and permanent delete buttons -->
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <form action="{{ route('users.restore', $user->id) }}" method="POST" style="display: inline;">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-outline-success" title="Reativar">
+                                                    <i class="fas fa-undo"></i> Reativar
+                                                </button>
+                                            </form>
+                                            <form action="{{ route('users.force-destroy', $user->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('ATENÇÃO: Isto irá excluir permanentemente o usuário e todos os seus dados. Esta ação não pode ser desfeita. Tem certeza?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir permanentemente">
+                                                    <i class="fas fa-trash"></i> Excluir
+                                                </button>
+                                            </form>
+                                        </div>
+                                    @else
+                                        <!-- User is active - show edit and inactivate buttons -->
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
+                                                <i class="fas fa-edit"></i> Editar
+                                            </a>
+                                            <form action="{{ route('users.destroy', $user->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja inativar este usuário?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Inativar">
+                                                    <i class="fas fa-ban"></i> Inativar
+                                                </button>
+                                            </form>
+                                        </div>
+                                    @endif
                                 </td>
                             </tr>
                             @endforeach

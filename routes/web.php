@@ -51,7 +51,6 @@ Route::middleware(['auth', \App\Http\Middleware\StudentMiddleware::class])->grou
     
     // Registros de ponto
     Route::get('/attendance/create', [AttendanceController::class, 'create'])->name('attendance.create');
-    Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
     Route::get('/attendance/history', [AttendanceController::class, 'history'])->name('attendance.history')->middleware(\App\Http\Middleware\CheckEmailLogin::class);
 });
 
@@ -60,31 +59,19 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     // Dashboard admin
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
     
-    // Usuários (excluindo create e store - admins não podem criar usuários)
-    Route::resource('users', UserController::class)->except(['create', 'store']);
-    
+    // Usuários (excluindo create, store, e show)
+    Route::resource('users', UserController::class)->except(['create', 'store', 'show']);
+
+    // Soft delete actions
+    Route::post('/users/{id}/restore', [UserController::class, 'restore'])->name('users.restore');
+    Route::delete('/users/{id}/force', [UserController::class, 'forceDestroy'])->name('users.force-destroy');
+
     // Relatórios
     Route::get('/reports', [AdminDashboardController::class, 'reports'])->name('admin.reports');
     Route::post('/reports/generate', [AdminDashboardController::class, 'generateReport'])->name('admin.reports.generate');
-    
-    // Configurações
-    Route::get('/config', [AdminDashboardController::class, 'config'])->name('admin.config');
-    Route::post('/config/update', [AdminDashboardController::class, 'updateConfig'])->name('admin.config.update');
 });
 
-// Test routes for debugging
-// Route::get('/test-api', function() {
-//     return response()->json(['status' => 'working']);
-// });
-//
-// Route::post('/test-endpoint', function () {
-//     return response()->json(['success' => true, 'message' => 'Test endpoint works!']);
-// });
-
-Route::post('/register-attendance-dashboard', [App\Http\Controllers\AttendanceController::class, 'registerFromDashboard'])
-    ->name('attendance.register.dashboard')
-    ->middleware(['auth', \App\Http\Middleware\StudentMiddleware::class]);
-
+// Rota de registro de ponto
 Route::post('/register-attendance', [App\Http\Controllers\AttendanceController::class, 'registerAttendance'])
     ->name('attendance.register')
     ->middleware(['auth', \App\Http\Middleware\StudentMiddleware::class]);

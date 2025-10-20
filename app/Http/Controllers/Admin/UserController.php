@@ -13,8 +13,8 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::query();
-        
+        $query = User::withTrashed(); // Include soft deleted users
+
         if ($request->search) {
             $query->where(function($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
@@ -22,19 +22,20 @@ class UserController extends Controller
                   ->orWhere('matricula', 'like', '%' . $request->search . '%');
             });
         }
-        
+
+        // Filter by status if requested
+        if ($request->has('status')) {
+            if ($request->status === 'inactive') {
+                $query->onlyTrashed();
+            } elseif ($request->status === 'active') {
+                $query->withoutTrashed();
+            }
+        }
+
         $users = $query->paginate(10);
-        
+
         return view('admin.users.index', compact('users'));
     }
-    
-    
-    public function show($id)
-    {
-        $user = User::findOrFail($id);
-        return view('admin.users.show', compact('user'));
-    }
-    
     public function edit($id)
     {
         $user = User::findOrFail($id);
@@ -129,13 +130,41 @@ class UserController extends Controller
     
     public function destroy($id)
     {
-        $user = User::findOrFail($id);
-        
+        $user = User::withTrashed()->findOrFail($id);
+
+        // Soft delete the user (just marks as inactive)
+        $user->delete();
+
+        return redirect()->route('users.index')->with('success', 'Usuário inativado com sucesso!');
+    }
+
+    /**
+     * Restore a soft deleted user
+     */
+    public function restore($id)
+    {
+        $user = User::withTrashed()->findOrFail($id);
+
+        if ($user->trashed()) {
+            $user->restore();
+            return redirect()->route('users.index')->with('success', 'Usuário reativado com sucesso!');
+        }
+
+        return redirect()->route('users.index')->with('info', 'Este usuário já está ativo.');
+    }
+
+    /**
+     * Permanently delete a user (force delete)
+     */
+    public function forceDestroy($id)
+    {
+        $user = User::withTrashed()->findOrFail($id);
+
         // Remover imagem de perfil se existir
         if ($user->profile_image) {
             Storage::disk('public')->delete($user->profile_image);
         }
-        
+
         // Remover registros faciais
         foreach ($user->recognitionRecords as $record) {
             if ($record->image_path) {
@@ -143,10 +172,11 @@ class UserController extends Controller
             }
             $record->delete();
         }
-        
-        $user->delete();
-        
-        return redirect()->route('users.index')->with('success', 'Usuário excluído com sucesso!');
+
+        // Permanently delete
+        $user->forceDelete();
+
+        return redirect()->route('users.index')->with('success', 'Usuário excluído permanentemente!');
     }
     
     private function processFacialData($faceData, $faceDescriptor, $userId)
