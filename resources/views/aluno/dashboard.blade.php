@@ -211,17 +211,6 @@
                     BATER<br>PONTO
                 </button>
             </div>
-
-            @if(!$isAllowedToday)
-            <div class="mt-2">
-                <small class="text-muted">
-                    <i class="fas fa-info-circle"></i> Hoje não é um dia de registro.
-                    @if(count($scheduleFormatted) > 0)
-                        <br>Seus dias: {{ implode(', ', array_column($scheduleFormatted, 'day')) }}
-                    @endif
-                </small>
-            </div>
-            @endif
             
             <div class="mt-3" style="background: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid #f08223;">
                 <div style="font-size: 0.95rem; color: #495057;">

@@ -44,7 +44,18 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
-        
+
+        // Clean schedule data before validation - remove entries without both entry and exit times
+        if ($request->has('schedule')) {
+            $cleanSchedule = [];
+            foreach ($request->schedule as $day => $times) {
+                if (!empty($times['entry']) && !empty($times['exit'])) {
+                    $cleanSchedule[$day] = $times;
+                }
+            }
+            $request->merge(['schedule' => $cleanSchedule]);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $id,
@@ -53,8 +64,8 @@ class UserController extends Controller
             'role' => 'required|in:aluno,admin',
             'password' => 'nullable|string|min:8|confirmed',
             'schedule' => 'nullable|array',
-            'schedule.*.entry' => 'nullable|date_format:H:i',
-            'schedule.*.exit' => 'nullable|date_format:H:i',
+            'schedule.*.entry' => 'required|date_format:H:i',
+            'schedule.*.exit' => 'required|date_format:H:i',
             'face_data' => 'nullable|string',
             'profile_image' => 'nullable|image|max:2048',
         ]);
