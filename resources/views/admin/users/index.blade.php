@@ -13,12 +13,6 @@
     .nav-pills .nav-link {
         color: #6c757d;
     }
-    .user-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
     .table td {
         vertical-align: middle;
     }
@@ -91,7 +85,6 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Foto</th>
                                 <th>Nome</th>
                                 <th>Matrícula</th>
                                 <th>Curso</th>
@@ -104,13 +97,6 @@
                             @foreach($users as $user)
                             <tr>
                                 <td>{{ $user->id }}</td>
-                                <td>
-                                    @if($user->profile_image)
-                                        <img src="{{ asset('storage/' . $user->profile_image) }}" alt="{{ $user->name }}" class="user-avatar">
-                                    @else
-                                        <img src="{{ asset('images/default-avatar.png') }}" alt="{{ $user->name }}" class="user-avatar">
-                                    @endif
-                                </td>
                                 <td>{{ $user->name }}</td>
                                 <td>{{ $user->matricula }}</td>
                                 <td>{{ $user->curso }}</td>

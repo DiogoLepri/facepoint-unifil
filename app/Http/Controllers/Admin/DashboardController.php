@@ -113,7 +113,7 @@ class DashboardController extends Controller
             $query->where('user_id', $userId);
         } elseif ($filterBy) {
             $query->whereHas('user', function($q) use ($filterBy) {
-                $q->where('course', $filterBy);
+                $q->where('curso', $filterBy);
             });
         }
         
@@ -125,13 +125,30 @@ class DashboardController extends Controller
             $uniqueStudents = $attendances->pluck('user_id')->unique()->count();
         } else {
             $totalStudents = User::where('role', 'aluno')->when($filterBy, function($q) use ($filterBy) {
-                return $q->where('course', $filterBy);
+                return $q->where('curso', $filterBy);
             })->count();
             $uniqueStudents = $attendances->pluck('user_id')->unique()->count();
         }
         
         $totalRecords = $attendances->count();
-        
+
+        // Calcular total de horas trabalhadas
+        $totalMinutes = 0;
+        foreach ($attendances as $attendance) {
+            if ($attendance->entry_time && $attendance->exit_time) {
+                $entrada = \Carbon\Carbon::parse($attendance->entry_time);
+                $saida = \Carbon\Carbon::parse($attendance->exit_time);
+                $totalMinutes += $entrada->diffInMinutes($saida);
+            }
+        }
+
+        $totalHours = floor($totalMinutes / 60);
+        $remainingMinutes = $totalMinutes % 60;
+        $totalHoursFormatted = sprintf('%02dh%02dm', $totalHours, $remainingMinutes);
+
+        // Contar registros com atraso
+        $lateCount = $attendances->where('is_late', true)->count();
+
         return [
             'attendances' => $attendances,
             'total_students' => $totalStudents,
@@ -139,18 +156,19 @@ class DashboardController extends Controller
             'total_records' => $totalRecords,
             'attendance_rate' => $totalStudents > 0 ? round(($uniqueStudents / $totalStudents) * 100, 2) : 0,
             'selected_user' => $userId ? User::find($userId) : null,
+            'total_hours' => $totalHoursFormatted,
+            'late_count' => $lateCount,
         ];
     }
     
     private function generatePdfByPeriod($period, $reportType, $data, $startDate, $endDate, $filterBy, $userId = null)
     {
-        $courseNames = [
-            'cc' => 'Ciência da Computação',
-            'eng' => 'Engenharia de Software',
-            '' => 'Todos os Cursos'
-        ];
-        
-        $courseName = $courseNames[$filterBy] ?? 'Todos os Cursos';
+        // Determinar nome do curso para exibição
+        if (empty($filterBy)) {
+            $courseName = 'Todos os Cursos';
+        } else {
+            $courseName = $filterBy; // Já vem como texto completo do formulário
+        }
         
         // Se é relatório por usuário, ajustar título e descrição
         if ($reportType === 'user' && $data['selected_user']) {

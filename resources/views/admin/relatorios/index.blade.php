@@ -73,8 +73,8 @@
                                 <label for="filter_by" class="form-label">Filtrar por Curso</label>
                                 <select class="form-select" id="filter_by" name="filter_by">
                                     <option value="">Todos os cursos</option>
-                                    <option value="cc">Ciência da Computação</option>
-                                    <option value="eng">Engenharia de Software</option>
+                                    <option value="Ciencia da Computacao">Ciência da Computação</option>
+                                    <option value="Engenharia de Software">Engenharia de Software</option>
                                 </select>
                             </div>
                             

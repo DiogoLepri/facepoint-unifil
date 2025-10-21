@@ -98,8 +98,7 @@
                             <label for="curso" class="form-label">Curso</label>
                             <select class="form-select @error('curso') is-invalid @enderror" id="curso" name="curso" required>
                                 <option value="">Selecione um curso</option>
-                                <option value="Sistemas de Informação" {{ old('curso', $user->curso) == 'Sistemas de Informação' ? 'selected' : '' }}>Sistemas de Informação</option>
-                                <option value="Ciência da Computação" {{ old('curso', $user->curso) == 'Ciência da Computação' ? 'selected' : '' }}>Ciência da Computação</option>
+                                <option value="Ciencia da Computacao" {{ old('curso', $user->curso) == 'Ciencia da Computacao' ? 'selected' : '' }}>Ciência da Computação</option>
                                 <option value="Engenharia de Software" {{ old('curso', $user->curso) == 'Engenharia de Software' ? 'selected' : '' }}>Engenharia de Software</option>
                             </select>
                             @error('curso')

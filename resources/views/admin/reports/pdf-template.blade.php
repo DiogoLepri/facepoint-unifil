@@ -89,7 +89,7 @@
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 15px;
         }
         
@@ -216,6 +216,10 @@
                 <span class="stat-number">{{ $data['attendance_rate'] }}%</span>
                 <div class="stat-label">Taxa de Presença</div>
             </div>
+            <div class="stat-card">
+                <span class="stat-number" style="color: #dc3545;">{{ $data['late_count'] }}</span>
+                <div class="stat-label">Registros com Atraso</div>
+            </div>
         </div>
     </div>
     
@@ -224,41 +228,83 @@
         <table class="attendance-table">
             <thead>
                 <tr>
-                    <th>Data/Hora</th>
-                    <th>Nome do Estudante</th>
-                    <th>E-mail</th>
-                    <th>Curso</th>
-                    <th>Tipo</th>
+                    <th>Data</th>
+                    <th>Nome</th>
+                    <th>Matrícula</th>
+                    <th>Entrada</th>
+                    <th>Saída</th>
+                    <th>Horas</th>
                     <th>Status</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($data['attendances'] as $attendance)
+                    @php
+                        $horasTrabalhadas = '';
+                        $status = '';
+                        $statusColor = '#666';
+
+                        if ($attendance->entry_time && $attendance->exit_time) {
+                            $entrada = \Carbon\Carbon::parse($attendance->entry_time);
+                            $saida = \Carbon\Carbon::parse($attendance->exit_time);
+                            $diff = $entrada->diff($saida);
+                            $horasTrabalhadas = sprintf('%02dh%02dm', $diff->h, $diff->i);
+
+                            // Status baseado em is_late e is_early
+                            if ($attendance->is_late) {
+                                $status = 'Atrasado';
+                                $statusColor = '#dc3545';
+                            } elseif ($attendance->is_early) {
+                                $status = 'Adiantado';
+                                $statusColor = '#28a745';
+                            } else {
+                                $status = 'No Horário';
+                                $statusColor = '#28a745';
+                            }
+                        } elseif ($attendance->entry_time) {
+                            $status = 'Sem Saída';
+                            $statusColor = '#ffc107';
+
+                            if ($attendance->is_late) {
+                                $status = 'Atrasado (sem saída)';
+                                $statusColor = '#dc3545';
+                            }
+                        } else {
+                            $status = 'Incompleto';
+                            $statusColor = '#6c757d';
+                        }
+                    @endphp
                     <tr>
-                        <td>{{ \Carbon\Carbon::parse($attendance->created_at)->format('d/m/Y H:i:s') }}</td>
+                        <td>{{ \Carbon\Carbon::parse($attendance->created_at)->format('d/m/Y') }}</td>
                         <td>{{ $attendance->user->name }}</td>
-                        <td>{{ $attendance->user->email }}</td>
+                        <td>{{ $attendance->user->matricula }}</td>
                         <td>
-                            @if($attendance->user->course === 'cc')
-                                Ciência da Computação
-                            @elseif($attendance->user->course === 'eng')
-                                Engenharia de Software
+                            @if($attendance->entry_time)
+                                {{ \Carbon\Carbon::parse($attendance->entry_time)->format('H:i') }}
                             @else
-                                {{ $attendance->user->course }}
+                                <span style="color: #999;">-</span>
                             @endif
                         </td>
-                        <td>{{ ucfirst($attendance->type) }}</td>
                         <td>
-                            @if($attendance->status === 'present')
-                                <span style="color: #28a745;">Presente</span>
+                            @if($attendance->exit_time)
+                                {{ \Carbon\Carbon::parse($attendance->exit_time)->format('H:i') }}
                             @else
-                                <span style="color: #dc3545;">{{ ucfirst($attendance->status) }}</span>
+                                <span style="color: #999;">-</span>
                             @endif
                         </td>
+                        <td>{{ $horasTrabalhadas ?: '-' }}</td>
+                        <td style="color: {{ $statusColor }}; font-weight: bold;">{{ $status }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
+
+        @if($data['total_hours'])
+        <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #f08223;">
+            <strong style="color: #f08223;">Total de Horas Trabalhadas no Período:</strong>
+            <span style="font-size: 16px; font-weight: bold;">{{ $data['total_hours'] }}</span>
+        </div>
+        @endif
     @else
         <div class="no-data">
             <p>Nenhum registro de presença encontrado para o período selecionado.</p>

@@ -61,7 +61,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $id,
             'matricula' => 'required|string|max:20|unique:users,matricula,' . $id,
-            'curso' => 'required|string',
+            'curso' => 'required|string|in:Ciencia da Computacao,Engenharia de Software',
             'role' => 'required|in:aluno,admin',
             'password' => 'nullable|string|min:8|confirmed',
             'schedule' => 'nullable|array',
