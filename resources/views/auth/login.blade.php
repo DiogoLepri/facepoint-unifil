@@ -454,10 +454,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const cameraPlaceholder = document.getElementById('camera-placeholder');
     const cameraStatus = document.querySelector('.camera-status');
     const recognitionStatus = document.getElementById('recognition-status');
-    
+
     let stream = null;
     let isProcessing = false;
     let modelsLoaded = false;
+
+    // Check camera permissions on page load
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        console.log('getUserMedia is supported');
+    } else {
+        showStatus('Seu navegador não suporta acesso à câmera.', 'error');
+        ativarBtn.disabled = true;
+    }
 
     // Load face-api models from local files
     const MODEL_URL = '/models';
@@ -518,7 +526,22 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             console.error('Error accessing camera:', error);
-            showStatus('Erro ao acessar câmera. Verifique as permissões.', 'error');
+
+            let errorMessage = 'Erro ao acessar câmera. ';
+
+            if (error.name === 'NotAllowedError') {
+                errorMessage += 'Permissão negada. Clique no ícone 🔒 na barra de endereço e permita o acesso à câmera.';
+            } else if (error.name === 'NotFoundError') {
+                errorMessage += 'Nenhuma câmera encontrada no dispositivo.';
+            } else if (error.name === 'NotReadableError') {
+                errorMessage += 'Câmera está sendo usada por outro aplicativo.';
+            } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                errorMessage += 'Acesso à câmera requer HTTPS ou localhost.';
+            } else {
+                errorMessage += 'Verifique as permissões do navegador.';
+            }
+
+            showStatus(errorMessage, 'error');
         }
     });
 
