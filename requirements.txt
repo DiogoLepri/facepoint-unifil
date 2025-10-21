@@ -1,5 +1,0 @@
-deepface
-flask
-flask-cors
-pillow
-numpy

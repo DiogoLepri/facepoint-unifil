@@ -22,10 +22,8 @@ yarn-error.log
 /.vscode
 /.zed
 
-# DeepFace specific ignores
-/deepface_env/
-/face_database/
-*.pyc
-__pycache__/
+# macOS
 .DS_Store
-*.log
+
+# Temporary files
+cookies.txt
