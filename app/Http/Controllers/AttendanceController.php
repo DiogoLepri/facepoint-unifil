@@ -27,12 +27,8 @@ class AttendanceController extends Controller
             return isset($user->schedule[$dayName]);
         }
 
-        // Fallback to old format
-        if (empty($user->days_of_week)) {
-            return !$date->isWeekend();
-        }
-
-        return in_array($dayName, $user->days_of_week);
+        // Se não há schedule, permitir apenas dias úteis
+        return !$date->isWeekend();
     }
 
     /**
@@ -50,10 +46,10 @@ class AttendanceController extends Controller
             ];
         }
 
-        // Fallback to old format
+        // Se não há schedule definido, usar horários padrão
         return [
-            'entry' => $user->entry_time ?? self::DEFAULT_ENTRY_TIME,
-            'exit' => $user->exit_time ?? self::DEFAULT_EXIT_TIME
+            'entry' => self::DEFAULT_ENTRY_TIME,
+            'exit' => self::DEFAULT_EXIT_TIME
         ];
     }
     public function create()
@@ -91,9 +87,9 @@ class AttendanceController extends Controller
 
             // Verificar se o usuário pode registrar ponto neste dia
             if (!$this->isAllowedDay($user, $now)) {
-                $allowedDaysText = empty($user->days_of_week)
-                    ? 'dias úteis (segunda a sexta)'
-                    : implode(', ', array_map('ucfirst', $user->days_of_week));
+                $allowedDaysText = !empty($user->schedule) && is_array($user->schedule)
+                    ? implode(', ', array_map('ucfirst', array_keys($user->schedule)))
+                    : 'dias úteis (segunda a sexta)';
 
                 return response()->json([
                     'success' => false,
@@ -118,9 +114,6 @@ class AttendanceController extends Controller
             $isEarly = $minutesDifference > 0;
             $isLate = $minutesDifference < -self::TOLERANCE_MINUTES;
 
-            // Justificativa é opcional
-            $justification = $request->input('justification');
-            
             if ($existingRecord) {
                 // Registrar saída
                 if ($existingRecord->entry_time && !$existingRecord->exit_time) {
@@ -130,8 +123,7 @@ class AttendanceController extends Controller
                         'expected_time' => $expectedDateTime,
                         'minutes_difference' => $minutesDifference,
                         'is_early' => $isEarly,
-                        'is_late' => $isLate,
-                        'justification' => $justification
+                        'is_late' => $isLate
                     ]);
                     
                     \Log::info('Saída registrada', ['user_id' => $user->id, 'record_id' => $existingRecord->id]);
@@ -160,8 +152,7 @@ class AttendanceController extends Controller
                     'expected_time' => $expectedDateTime,
                     'minutes_difference' => $minutesDifference,
                     'is_early' => $isEarly,
-                    'is_late' => $isLate,
-                    'justification' => $justification
+                    'is_late' => $isLate
                 ]);
                 
                 \Log::info('Entrada registrada', ['user_id' => $user->id, 'record_id' => $newRecord->id]);
@@ -200,9 +191,9 @@ class AttendanceController extends Controller
 
             // Verificar se o usuário pode registrar ponto neste dia
             if (!$this->isAllowedDay($user, $now)) {
-                $allowedDaysText = empty($user->days_of_week)
-                    ? 'dias úteis (segunda a sexta)'
-                    : implode(', ', array_map('ucfirst', $user->days_of_week));
+                $allowedDaysText = !empty($user->schedule) && is_array($user->schedule)
+                    ? implode(', ', array_map('ucfirst', array_keys($user->schedule)))
+                    : 'dias úteis (segunda a sexta)';
 
                 return response()->json([
                     'success' => true,
@@ -226,8 +217,7 @@ class AttendanceController extends Controller
                 'success' => true,
                 'today_record' => $todayRecord ? [
                     'entry_time' => $todayRecord->entry_time?->format('H:i'),
-                    'exit_time' => $todayRecord->exit_time?->format('H:i'),
-                    'has_justification' => !empty($todayRecord->justification)
+                    'exit_time' => $todayRecord->exit_time?->format('H:i')
                 ] : null,
                 'next_punch_type' => $nextPunchType,
                 'expected_time' => $expectedTime,

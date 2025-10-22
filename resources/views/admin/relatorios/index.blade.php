@@ -53,7 +53,6 @@
                                 <label for="report_type" class="form-label">Tipo de Relatório</label>
                                 <select class="form-select" id="report_type" name="report_type">
                                     <option value="attendance">Relatório de Presença</option>
-                                    <option value="summary">Relatório de Sumário</option>
                                     <option value="user">Relatório por Usuário</option>
                                 </select>
                             </div>

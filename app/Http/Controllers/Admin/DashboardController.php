@@ -36,7 +36,7 @@ class DashboardController extends Controller
     public function generateReport(Request $request)
     {
         $request->validate([
-            'report_type' => 'required|in:attendance,summary,user',
+            'report_type' => 'required|in:attendance,user',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'filter_by' => 'nullable|string',

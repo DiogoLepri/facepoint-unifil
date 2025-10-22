@@ -46,6 +46,11 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
+        // Proteger o administrador principal
+        if ($user->email === 'joao.andrade@unifil.br') {
+            return redirect()->back()->withErrors(['error' => 'O administrador principal não pode ser editado por motivos de segurança.']);
+        }
+
         // Clean schedule data before validation - remove entries without both entry and exit times
         if ($request->has('schedule')) {
             $cleanSchedule = [];
@@ -67,7 +72,6 @@ class UserController extends Controller
             'schedule' => 'nullable|array',
             'schedule.*.entry' => 'required|date_format:H:i',
             'schedule.*.exit' => 'required|date_format:H:i',
-            'face_data' => 'nullable|string',
             'profile_image' => 'nullable|image|max:2048',
         ]);
         
@@ -131,6 +135,11 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::withTrashed()->findOrFail($id);
+
+        // Proteger o administrador principal
+        if ($user->email === 'joao.andrade@unifil.br') {
+            return redirect()->back()->withErrors(['error' => 'O administrador principal não pode ser inativado por motivos de segurança.']);
+        }
 
         // Soft delete the user (just marks as inactive)
         $user->delete();

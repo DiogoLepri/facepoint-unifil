@@ -16,7 +16,6 @@ class AttendanceRecord extends Model
         'entry_time',
         'exit_time',
         'status',
-        'justification',
         'is_early',
         'is_late',
         'expected_time',

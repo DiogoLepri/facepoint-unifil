@@ -234,7 +234,7 @@
                 <div class="stat-number">
                     @php
                         $irregularCount = $attendances->where(function($record) {
-                            return $record->justification || $record->is_early || $record->is_late;
+                            return $record->is_early || $record->is_late;
                         })->count();
                     @endphp
                     {{ $irregularCount }}
@@ -288,7 +288,6 @@
                             <th>Saída</th>
                             <th>Total</th>
                             <th>Status</th>
-                            <th>Observações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -333,24 +332,12 @@
                                 @endif
                             </td>
                             <td>
-                                @if($record->justification)
-                                    <span class="status-badge status-justified">Justificado</span>
-                                @elseif($record->is_early || $record->is_late)
+                                @if($record->is_early || $record->is_late)
                                     <span class="status-badge status-irregular">Irregular</span>
                                 @elseif($record->entry_time && $record->exit_time)
                                     <span class="status-badge status-normal">Normal</span>
                                 @else
                                     <span class="status-badge status-incomplete">Incompleto</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if($record->justification)
-                                    <i class="fas fa-comment-alt text-warning" 
-                                       title="{{ $record->justification }}" 
-                                       data-bs-toggle="tooltip"></i>
-                                    <small class="text-muted">Com justificativa</small>
-                                @else
-                                    <span class="text-muted">-</span>
                                 @endif
                             </td>
                         </tr>

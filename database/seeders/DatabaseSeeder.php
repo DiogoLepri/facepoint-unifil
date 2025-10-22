@@ -13,7 +13,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-        // Removed test user creation to avoid unnecessary test data in production
+        // Criar usuário administrador do .env
+        $this->call([
+            AdminUserSeeder::class,
+        ]);
     }
 }
