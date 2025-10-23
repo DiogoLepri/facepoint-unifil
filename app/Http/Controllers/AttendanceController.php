@@ -10,35 +10,25 @@ use Carbon\Carbon;
 
 class AttendanceController extends Controller
 {
-    // Horários padrão (usados como fallback se o usuário não tiver horários definidos)
     const DEFAULT_ENTRY_TIME = '14:00';
     const DEFAULT_EXIT_TIME = '18:00';
-    const TOLERANCE_MINUTES = 15; // Tolerância de 15 minutos
+    const TOLERANCE_MINUTES = 15;
 
-    /**
-     * Check if the user is allowed to register attendance on the given day
-     */
     private function isAllowedDay($user, Carbon $date)
     {
         $dayName = strtolower($date->englishDayOfWeek);
 
-        // Check new schedule format first
         if (!empty($user->schedule) && is_array($user->schedule)) {
             return isset($user->schedule[$dayName]);
         }
 
-        // Se não há schedule, permitir apenas dias úteis
         return !$date->isWeekend();
     }
 
-    /**
-     * Get entry and exit times for a specific day
-     */
     private function getTimesForDay($user, Carbon $date)
     {
         $dayName = strtolower($date->englishDayOfWeek);
 
-        // Check new schedule format first
         if (!empty($user->schedule) && is_array($user->schedule) && isset($user->schedule[$dayName])) {
             return [
                 'entry' => $user->schedule[$dayName]['entry'] ?? self::DEFAULT_ENTRY_TIME,
@@ -46,7 +36,6 @@ class AttendanceController extends Controller
             ];
         }
 
-        // Se não há schedule definido, usar horários padrão
         return [
             'entry' => self::DEFAULT_ENTRY_TIME,
             'exit' => self::DEFAULT_EXIT_TIME
@@ -60,20 +49,19 @@ class AttendanceController extends Controller
     public function history(Request $request)
     {
         $user = Auth::user();
-        
+
         $query = AttendanceRecord::where('user_id', $user->id);
-        
-        // Aplicar filtros
+
         if ($request->start_date) {
             $query->whereDate('created_at', '>=', $request->start_date);
         }
-        
+
         if ($request->end_date) {
             $query->whereDate('created_at', '<=', $request->end_date);
         }
-        
+
         $attendances = $query->orderBy('created_at', 'desc')->paginate(10);
-        
+
         return view('aluno.historico', compact('attendances'));
     }
     
@@ -81,11 +69,10 @@ class AttendanceController extends Controller
     {
         try {
             \Log::info('Iniciando registro de ponto');
-            
+
             $user = Auth::user();
             $now = Carbon::now();
 
-            // Verificar se o usuário pode registrar ponto neste dia
             if (!$this->isAllowedDay($user, $now)) {
                 $allowedDaysText = !empty($user->schedule) && is_array($user->schedule)
                     ? implode(', ', array_map('ucfirst', array_keys($user->schedule)))
@@ -96,26 +83,22 @@ class AttendanceController extends Controller
                     'message' => "Registros de ponto só são permitidos em: {$allowedDaysText}."
                 ]);
             }
-            
-            // Verificar se já existe um registro para hoje
+
             $today = $now->format('Y-m-d');
             $existingRecord = AttendanceRecord::where('user_id', $user->id)
                 ->whereDate('created_at', $today)
                 ->first();
-            
+
             $punchType = $existingRecord && $existingRecord->entry_time ? 'exit' : 'entry';
-            // Get day-specific times
             $times = $this->getTimesForDay($user, $now);
             $expectedTime = $punchType === 'entry' ? $times['entry'] : $times['exit'];
             $expectedDateTime = Carbon::parse($today . ' ' . $expectedTime);
-            
-            // Calcular diferença em minutos
+
             $minutesDifference = $now->diffInMinutes($expectedDateTime, false);
             $isEarly = $minutesDifference > 0;
             $isLate = $minutesDifference < -self::TOLERANCE_MINUTES;
 
             if ($existingRecord) {
-                // Registrar saída
                 if ($existingRecord->entry_time && !$existingRecord->exit_time) {
                     $existingRecord->update([
                         'exit_time' => $now,
@@ -143,7 +126,6 @@ class AttendanceController extends Controller
                     ]);
                 }
             } else {
-                // Criar novo registro de entrada
                 $newRecord = AttendanceRecord::create([
                     'user_id' => $user->id,
                     'entry_time' => $now,
@@ -189,7 +171,6 @@ class AttendanceController extends Controller
             $user = Auth::user();
             $now = Carbon::now();
 
-            // Verificar se o usuário pode registrar ponto neste dia
             if (!$this->isAllowedDay($user, $now)) {
                 $allowedDaysText = !empty($user->schedule) && is_array($user->schedule)
                     ? implode(', ', array_map('ucfirst', array_keys($user->schedule)))
@@ -201,15 +182,13 @@ class AttendanceController extends Controller
                     'message' => "Hoje não é um dia de registro. Seus dias são: {$allowedDaysText}."
                 ]);
             }
-        
-        // Obter registro de hoje
+
         $today = $now->format('Y-m-d');
         $todayRecord = AttendanceRecord::where('user_id', $user->id)
             ->whereDate('created_at', $today)
             ->first();
-        
+
         $nextPunchType = $todayRecord && $todayRecord->entry_time ? 'exit' : 'entry';
-        // Get day-specific times
         $times = $this->getTimesForDay($user, $now);
         $expectedTime = $nextPunchType === 'entry' ? $times['entry'] : $times['exit'];
 
@@ -242,21 +221,19 @@ class AttendanceController extends Controller
         $request->validate([
             'image_data' => 'required|string'
         ]);
-        
+
+
         $imageData = $request->image_data;
-        
-        // Initialize DeepFace service
+
         $deepFaceService = new \App\Services\DeepFaceService();
-        
-        // Validate image data
+
         if (!$deepFaceService->validateImageData($imageData)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Dados de imagem inválidos'
             ], 400);
         }
-        
-        // Check if DeepFace API is healthy
+
         $healthCheck = $deepFaceService->healthCheck();
         if (!$healthCheck['success']) {
             \Log::error('DeepFace API health check failed', $healthCheck);
@@ -265,8 +242,7 @@ class AttendanceController extends Controller
                 'message' => 'Serviço de reconhecimento facial temporariamente indisponível'
             ], 503);
         }
-        
-        // Perform face recognition
+
         $recognitionResult = $deepFaceService->recognizeFace($imageData);
         
         if (!$recognitionResult['success']) {
@@ -276,9 +252,10 @@ class AttendanceController extends Controller
                 'confidence' => $recognitionResult['data']['confidence'] ?? null
             ]);
         }
-        
+
+
         $recognitionData = $recognitionResult['data'];
-        
+
         if (!$recognitionData['success']) {
             return response()->json([
                 'success' => false,
@@ -286,12 +263,10 @@ class AttendanceController extends Controller
                 'confidence' => $recognitionData['confidence'] ?? null
             ]);
         }
-        
-        // Get user from recognition result
+
         $userId = $recognitionData['user_id'];
         $confidence = $recognitionData['confidence'] ?? 0;
-        
-        // Find Laravel user
+
         $user = User::find($userId);
         if (!$user) {
             \Log::warning('DeepFace recognized user not found in Laravel', [
@@ -302,8 +277,7 @@ class AttendanceController extends Controller
                 'message' => 'Usuário não encontrado no sistema'
             ]);
         }
-        
-        // Check confidence threshold
+
         if (!$deepFaceService->meetsConfidenceThreshold($confidence)) {
             return response()->json([
                 'success' => false,
@@ -311,11 +285,9 @@ class AttendanceController extends Controller
                 'confidence' => $confidence
             ]);
         }
-        
-        // Usar a mesma lógica do registerAttendance
+
         $now = Carbon::now();
 
-        // Verificar se o usuário pode registrar ponto neste dia
         if (!$this->isAllowedDay($user, $now)) {
             $allowedDaysText = empty($user->days_of_week)
                 ? 'dias úteis (segunda a sexta)'
@@ -326,14 +298,14 @@ class AttendanceController extends Controller
                 'message' => "Registros de ponto só são permitidos em: {$allowedDaysText}."
             ]);
         }
-        
+
+
         $today = $now->format('Y-m-d');
         $existingRecord = AttendanceRecord::where('user_id', $user->id)
             ->whereDate('created_at', $today)
             ->first();
-        
+
         $punchType = $existingRecord && $existingRecord->entry_time ? 'exit' : 'entry';
-        // Get day-specific times
         $times = $this->getTimesForDay($user, $now);
         $expectedTime = $punchType === 'entry' ? $times['entry'] : $times['exit'];
         $expectedDateTime = Carbon::parse($today . ' ' . $expectedTime);
@@ -341,9 +313,7 @@ class AttendanceController extends Controller
         $minutesDifference = $now->diffInMinutes($expectedDateTime, false);
         $isEarly = $minutesDifference > 0;
         $isLate = $minutesDifference < -self::TOLERANCE_MINUTES;
-        
-        // Para reconhecimento facial, vamos assumir que é sempre permitido
-        // mas vamos marcar como early/late conforme necessário
+
         if ($existingRecord) {
             if ($existingRecord->entry_time && !$existingRecord->exit_time) {
                 $existingRecord->update([
@@ -395,16 +365,14 @@ class AttendanceController extends Controller
             ]
         ]);
     }
-    // Método para calcular o próximo horário de registro esperado
+
     private function getNextRegisterTime($userId)
     {
         try {
             $now = Carbon::now();
             $user = User::find($userId);
 
-            // Check if today is an allowed day
             if (!$this->isAllowedDay($user, $now)) {
-                // Find next allowed day
                 $nextDay = $now->copy()->addDay();
                 $daysChecked = 0;
 
@@ -422,7 +390,6 @@ class AttendanceController extends Controller
                 return 'Nenhum dia disponível';
             }
 
-            // Get today's times
             $times = $this->getTimesForDay($user, $now);
 
             $today = $now->format('Y-m-d');
@@ -438,7 +405,6 @@ class AttendanceController extends Controller
                 return $times['exit'] . ' (Saída)';
             }
 
-            // Se já registrou entrada e saída hoje, buscar próximo dia permitido
             $nextDay = $now->copy()->addDay();
             $daysChecked = 0;
 
@@ -460,8 +426,7 @@ class AttendanceController extends Controller
             return self::DEFAULT_ENTRY_TIME;
         }
     }
-    
-    // Método para calcular horas registradas
+
     private function calculateHoursRegistered($userId)
     {
         try {
@@ -496,13 +461,13 @@ class AttendanceController extends Controller
             return '0h';
         }
     }
-    
-    // Método para calcular a frequência
+
+
     private function calculateAttendancePercentage($userId)
     {
         try {
             $diasUteis = $this->getBusinessDaysInMonth();
-            
+
             $diasComRegistro = AttendanceRecord::where('user_id', $userId)
                 ->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
@@ -511,17 +476,16 @@ class AttendanceController extends Controller
                 ->groupBy('attendance_date')
                 ->get()
                 ->count();
-            
+
             $percentual = ($diasUteis > 0) ? round(($diasComRegistro / $diasUteis) * 100) : 0;
-            
+
             return $percentual . '%';
         } catch (\Exception $e) {
             \Log::error('Erro ao calcular frequência: ' . $e->getMessage());
             return '0%';
         }
     }
-    
-    // Método auxiliar para contar dias úteis no mês
+
     private function getBusinessDaysInMonth()
     {
         $now = Carbon::now();
