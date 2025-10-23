@@ -26,7 +26,6 @@ class AttendanceRecord extends Model
     protected $casts = [
         'entry_time' => 'datetime',
         'exit_time' => 'datetime',
-        'expected_time' => 'datetime',
         'is_early' => 'boolean',
         'is_late' => 'boolean',
     ];

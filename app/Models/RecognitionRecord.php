@@ -8,6 +8,7 @@ class RecognitionRecord extends Model
 {
     protected $fillable = [
         'user_id',
+        'image_path',
         'face_descriptor',
         'capture_type',
     ];

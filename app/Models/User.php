@@ -61,4 +61,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(RecognitionRecord::class);
     }
+
+    /**
+     * Get the attendance records associated with the user.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function attendanceRecords()
+    {
+        return $this->hasMany(AttendanceRecord::class);
+    }
 }
