@@ -1,0 +1,31 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Ambiente virtual
+env/
+ENV/
+
+# Banco de dados de faces
+faces_db/
+
+# Logs
+logs/
+*.log
+
+# Modelos do DeepFace (serão baixados automaticamente)
+.deepface/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema
+.DS_Store
+Thumbs.db

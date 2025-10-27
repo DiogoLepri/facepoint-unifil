@@ -1,0 +1,30 @@
+# FacePoint UniFil - DeepFace API Dependencies
+
+# Framework Web
+Flask>=3.0.0
+flask-cors>=4.0.0
+
+# DeepFace e suas dependências
+deepface
+tensorflow
+
+# Processamento de imagens
+opencv-python
+Pillow
+
+# Manipulação de dados
+numpy
+pandas
+
+# Utilitários
+python-dotenv
+requests
+
+# Logging
+coloredlogs
+
+# MTCNN (detector de faces alternativo)
+mtcnn
+
+# Modelos adicionais
+retina-face

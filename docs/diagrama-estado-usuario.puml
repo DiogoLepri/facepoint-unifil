@@ -1,0 +1,27 @@
+@startuml Diagrama de Estado - Usuário
+title FacePoint UniFil - Ciclo de Vida do Usuário
+
+[*] --> Criacao : Registro
+
+Criacao --> Ativo : Usuário criado
+
+Ativo --> SoftDeleted : Admin exclui
+
+SoftDeleted --> Ativo : Admin restaura
+SoftDeleted --> ExcluidoPermanente : Exclusão permanente
+
+ExcluidoPermanente --> [*]
+
+note right of Ativo
+  Pode fazer login via:
+  - Email/senha
+  - Reconhecimento facial
+end note
+
+note right of SoftDeleted
+  deleted_at != NULL
+  Dados preservados
+  Pode ser restaurado
+end note
+
+@enduml

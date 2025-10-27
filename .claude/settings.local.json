@@ -27,7 +27,11 @@
       "Bash(git push:*)",
       "Bash(git reset:*)",
       "Bash(git restore:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(tree:*)",
+      "Bash(git log:*)",
+      "Bash(python3 -m pip:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
