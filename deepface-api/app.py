@@ -14,7 +14,7 @@ from datetime import datetime
 import numpy as np
 import cv2
 
-# Configuração da aplicação
+
 app = Flask(__name__)
 CORS(app)
 
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Configurações
 FACES_DB_PATH = os.path.join(os.path.dirname(__file__), 'faces_db')
-MODEL_NAME = 'Facenet128'  # FaceNet128 - 128 dimensões (temporário)
+MODEL_NAME = 'Facenet128'  
 DETECTOR_BACKEND = 'opencv'
 DISTANCE_METRIC = 'cosine'
 ENFORCE_DETECTION = True
