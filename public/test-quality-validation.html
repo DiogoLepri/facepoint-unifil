@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Validação de Qualidade</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #003366;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .test-result {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .test-result.pass {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .test-result.fail {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            background-color: #003366;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #002244;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Teste de Validação de Qualidade Facial</h1>
+
+        <div class="test-section">
+            <h3>1. Teste de Detecção de Brilho</h3>
+            <p>Testando se a função de cálculo de brilho funciona corretamente.</p>
+            <button onclick="testBrightness()">Executar Teste</button>
+            <div id="brightness-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Teste de Detecção de Skin Tone</h3>
+            <p>Testando se a detecção de tons de pele funciona.</p>
+            <button onclick="testSkinDetection()">Executar Teste</button>
+            <div id="skin-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Teste de Tamanho de Face</h3>
+            <p>Testando se o cálculo de tamanho do rosto funciona.</p>
+            <button onclick="testFaceSize()">Executar Teste</button>
+            <div id="size-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Teste de Integração</h3>
+            <p>Testando toda a lógica de validação de qualidade.</p>
+            <button onclick="testIntegration()">Executar Teste Completo</button>
+            <div id="integration-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Simular a função de cálculo de brilho
+        function calculateImageBrightness(imageData) {
+            const data = imageData.data;
+            let sum = 0;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                sum += (0.2126 * r + 0.7152 * g + 0.0722 * b);
+            }
+
+            return sum / (data.length / 4);
+        }
+
+        // Simular detecção de skin tone
+        function detectSkinTone(imageData) {
+            const data = imageData.data;
+            let skinPixels = 0;
+            let totalPixels = 0;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                totalPixels++;
+
+                if (r > 95 && g > 40 && b > 20 &&
+                    r > g && r > b &&
+                    Math.abs(r - g) > 15) {
+                    skinPixels++;
+                }
+            }
+
+            return skinPixels / totalPixels;
+        }
+
+        // Teste 1: Brilho
+        function testBrightness() {
+            const result = document.getElementById('brightness-result');
+
+            // Criar canvas de teste
+            const canvas = document.createElement('canvas');
+            canvas.width = 100;
+            canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+
+            // Testar com imagem escura (RGB: 30, 30, 30)
+            ctx.fillStyle = 'rgb(30, 30, 30)';
+            ctx.fillRect(0, 0, 100, 100);
+            const darkData = ctx.getImageData(0, 0, 100, 100);
+            const darkBrightness = calculateImageBrightness(darkData);
+
+            // Testar com imagem clara (RGB: 200, 200, 200)
+            ctx.fillStyle = 'rgb(200, 200, 200)';
+            ctx.fillRect(0, 0, 100, 100);
+            const brightData = ctx.getImageData(0, 0, 100, 100);
+            const brightBrightness = calculateImageBrightness(brightData);
+
+            // Testar com imagem normal (RGB: 120, 120, 120)
+            ctx.fillStyle = 'rgb(120, 120, 120)';
+            ctx.fillRect(0, 0, 100, 100);
+            const normalData = ctx.getImageData(0, 0, 100, 100);
+            const normalBrightness = calculateImageBrightness(normalData);
+
+            const passed = darkBrightness < 60 && brightBrightness > 180 &&
+                          normalBrightness >= 60 && normalBrightness <= 180;
+
+            result.className = 'test-result ' + (passed ? 'pass' : 'fail');
+            result.innerHTML = `
+                ${passed ? '✅' : '❌'} Teste ${passed ? 'PASSOU' : 'FALHOU'}<br>
+                Escuro: ${darkBrightness.toFixed(2)} (esperado < 60)<br>
+                Claro: ${brightBrightness.toFixed(2)} (esperado > 180)<br>
+                Normal: ${normalBrightness.toFixed(2)} (esperado: 60-180)
+            `;
+        }
+
+        // Teste 2: Skin Detection
+        function testSkinDetection() {
+            const result = document.getElementById('skin-result');
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 100;
+            canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+
+            // Testar com cor de pele (RGB: 220, 180, 140)
+            ctx.fillStyle = 'rgb(220, 180, 140)';
+            ctx.fillRect(0, 0, 100, 100);
+            const skinData = ctx.getImageData(0, 0, 100, 100);
+            const skinRatio = detectSkinTone(skinData);
+
+            // Testar com cor não-pele (RGB: 50, 100, 200 - azul)
+            ctx.fillStyle = 'rgb(50, 100, 200)';
+            ctx.fillRect(0, 0, 100, 100);
+            const nonSkinData = ctx.getImageData(0, 0, 100, 100);
+            const nonSkinRatio = detectSkinTone(nonSkinData);
+
+            const passed = skinRatio > 0.08 && nonSkinRatio < 0.08;
+
+            result.className = 'test-result ' + (passed ? 'pass' : 'fail');
+            result.innerHTML = `
+                ${passed ? '✅' : '❌'} Teste ${passed ? 'PASSOU' : 'FALHOU'}<br>
+                Tom de pele: ${(skinRatio * 100).toFixed(2)}% (esperado > 8%)<br>
+                Cor não-pele: ${(nonSkinRatio * 100).toFixed(2)}% (esperado < 8%)
+            `;
+        }
+
+        // Teste 3: Face Size
+        function testFaceSize() {
+            const result = document.getElementById('size-result');
+
+            // Testar cálculo de tamanho
+            const smallFace = { skinRatio: 0.05 };
+            const goodFace = { skinRatio: 0.15 };
+            const largeFace = { skinRatio: 0.30 };
+
+            const smallSize = smallFace.skinRatio * 2;
+            const goodSize = goodFace.skinRatio * 2;
+            const largeSize = largeFace.skinRatio * 2;
+
+            const passed = smallSize < 0.15 &&
+                          goodSize >= 0.15 && goodSize <= 0.5 &&
+                          largeSize >= 0.15 && largeSize <= 0.5;
+
+            result.className = 'test-result ' + (passed ? 'pass' : 'fail');
+            result.innerHTML = `
+                ${passed ? '✅' : '❌'} Teste ${passed ? 'PASSOU' : 'FALHOU'}<br>
+                Rosto pequeno: ${smallSize.toFixed(2)} (esperado < 0.15)<br>
+                Rosto bom: ${goodSize.toFixed(2)} (esperado: 0.15-0.5)<br>
+                Rosto grande: ${largeSize.toFixed(2)} (esperado: 0.15-0.5)
+            `;
+        }
+
+        // Teste 4: Integração
+        function testIntegration() {
+            const result = document.getElementById('integration-result');
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 200;
+            canvas.height = 200;
+            const ctx = canvas.getContext('2d');
+
+            // Criar imagem simulando condições ideais
+            // Tom de pele com brilho adequado
+            ctx.fillStyle = 'rgb(200, 150, 110)';
+            ctx.fillRect(0, 0, 200, 200);
+
+            const imageData = ctx.getImageData(0, 0, 200, 200);
+            const brightness = calculateImageBrightness(imageData);
+            const skinRatio = detectSkinTone(imageData);
+            const faceSize = skinRatio * 2;
+
+            const qualityStatus = {
+                face: skinRatio > 0.08,
+                brightness: brightness >= 60 && brightness <= 180,
+                size: faceSize >= 0.15 && faceSize <= 0.5
+            };
+
+            const allGood = qualityStatus.face && qualityStatus.brightness && qualityStatus.size;
+
+            result.className = 'test-result ' + (allGood ? 'pass' : 'fail');
+            result.innerHTML = `
+                ${allGood ? '✅' : '❌'} Teste de Integração ${allGood ? 'PASSOU' : 'FALHOU'}<br><br>
+                <strong>Status das Validações:</strong><br>
+                Rosto detectado: ${qualityStatus.face ? '✅ SIM' : '❌ NÃO'} (${(skinRatio * 100).toFixed(1)}%)<br>
+                Iluminação adequada: ${qualityStatus.brightness ? '✅ SIM' : '❌ NÃO'} (${brightness.toFixed(1)})<br>
+                Tamanho adequado: ${qualityStatus.size ? '✅ SIM' : '❌ NÃO'} (${faceSize.toFixed(2)})<br><br>
+                <strong>Resultado:</strong> ${allGood ? 'Foto pode ser capturada!' : 'Foto não atende aos critérios de qualidade'}
+            `;
+        }
+    </script>
+</body>
+</html>

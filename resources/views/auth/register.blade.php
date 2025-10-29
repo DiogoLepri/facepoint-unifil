@@ -110,6 +110,11 @@
         color: #666;
         font-size: 0.9rem;
         margin-bottom: 20px;
+        font-weight: 600;
+        padding: 10px;
+        border-radius: 8px;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
     }
     
     .btn {
@@ -127,10 +132,29 @@
         background-color: #28a745;
         color: white;
         width: 100%;
+        position: relative;
+        overflow: hidden;
     }
-    
-    .btn-success:hover {
+
+    .btn-success:hover:not(:disabled) {
         background-color: #218838;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    }
+
+    .btn-success:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .btn-success:not(:disabled) {
+        animation: buttonReady 1.5s infinite;
+    }
+
+    @keyframes buttonReady {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4); }
+        50% { box-shadow: 0 0 15px 5px rgba(40, 167, 69, 0.2); }
     }
     
     .btn-primary {
@@ -287,39 +311,52 @@
     .quality-indicator {
         display: flex;
         align-items: center;
-        gap: 5px;
-        padding: 5px 10px;
-        border-radius: 15px;
+        gap: 8px;
+        padding: 8px 15px;
+        border-radius: 20px;
         background-color: #f8f9fa;
-        border: 1px solid #ddd;
-        transition: all 0.3s;
+        border: 2px solid #ddd;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        font-size: 0.85rem;
     }
-    
+
     .quality-indicator.good {
         background-color: #d4edda;
         border-color: #28a745;
         color: #155724;
+        animation: pulseGreen 2s infinite;
     }
-    
+
     .quality-indicator.bad {
         background-color: #f8d7da;
         border-color: #dc3545;
         color: #721c24;
     }
-    
+
     .quality-indicator .icon {
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         background-color: #6c757d;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 0 0 rgba(108, 117, 125, 0.4);
     }
-    
+
     .quality-indicator.good .icon {
         background-color: #28a745;
+        box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
     }
-    
+
     .quality-indicator.bad .icon {
         background-color: #dc3545;
+        box-shadow: 0 0 4px rgba(220, 53, 69, 0.4);
+    }
+
+    @keyframes pulseGreen {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
     }
     
     .capture-progress {
@@ -628,39 +665,169 @@ document.addEventListener('DOMContentLoaded', function() {
         brightness: false,
         size: false
     };
-    
+
     function startRealTimeVerification() {
-        // Simplified: Just enable the capture button after a short delay
-        setTimeout(() => {
-            if (!photoCaptured) {
-                ativarCameraBtn.disabled = false;
-                ativarCameraBtn.style.backgroundColor = '#28a745';
-                cameraStatus.textContent = '✓ Posicione seu rosto e clique para capturar';
-            }
-        }, 1000);
+        // Start continuous quality verification
+        verificationInterval = setInterval(performQualityCheck, 500); // Check every 500ms
     }
 
     async function performQualityCheck() {
-        // Simplified version without face-api.js
-        // Flask API will do the face detection when capturing
-        cameraStatus.textContent = 'Posicione seu rosto no centro...';
+        if (photoCaptured) {
+            clearInterval(verificationInterval);
+            return;
+        }
+
+        try {
+            // Set canvas to video size for analysis
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+
+            // Draw current video frame
+            ctx.save();
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            // Get image data for analysis
+            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+            // Analyze quality metrics
+            const faceDetected = await detectFace(imageDataUrl);
+            const brightness = calculateImageBrightness();
+            const faceSize = faceDetected ? calculateFaceSize(faceDetected) : 0;
+
+            // Update quality status
+            qualityStatus.face = faceDetected !== null;
+            qualityStatus.brightness = brightness >= 60 && brightness <= 180;
+            qualityStatus.size = faceSize >= 0.15 && faceSize <= 0.5;
+
+            // Update UI indicators
+            updateIndicator(document.getElementById('face-indicator'), qualityStatus.face);
+            updateIndicator(document.getElementById('brightness-indicator'), qualityStatus.brightness);
+            updateIndicator(document.getElementById('size-indicator'), qualityStatus.size);
+
+            // Update face guide visual feedback
+            const faceGuide = document.getElementById('face-guide');
+            if (qualityStatus.face) {
+                faceGuide.classList.add('detected');
+            } else {
+                faceGuide.classList.remove('detected');
+            }
+
+            // Enable/disable capture button based on all quality checks
+            const allQualityGood = qualityStatus.face && qualityStatus.brightness && qualityStatus.size;
+
+            if (allQualityGood) {
+                ativarCameraBtn.disabled = false;
+                ativarCameraBtn.style.backgroundColor = '#28a745';
+                cameraStatus.textContent = '✓ Qualidade adequada! Clique para capturar';
+                cameraStatus.style.color = '#28a745';
+            } else {
+                ativarCameraBtn.disabled = true;
+                ativarCameraBtn.style.backgroundColor = '#6c757d';
+
+                // Provide specific feedback
+                if (!qualityStatus.face) {
+                    cameraStatus.textContent = '⚠ Nenhum rosto detectado';
+                    cameraStatus.style.color = '#dc3545';
+                } else if (!qualityStatus.size) {
+                    if (faceSize < 0.15) {
+                        cameraStatus.textContent = '⚠ Aproxime-se da câmera';
+                    } else {
+                        cameraStatus.textContent = '⚠ Afaste-se da câmera';
+                    }
+                    cameraStatus.style.color = '#ffc107';
+                } else if (!qualityStatus.brightness) {
+                    if (brightness < 60) {
+                        cameraStatus.textContent = '⚠ Ambiente muito escuro';
+                    } else {
+                        cameraStatus.textContent = '⚠ Ambiente muito claro';
+                    }
+                    cameraStatus.style.color = '#ffc107';
+                }
+            }
+
+        } catch (error) {
+            console.error('Error in quality check:', error);
+        }
+    }
+
+    // Detect face using a simple method (color detection and shape analysis)
+    async function detectFace(imageDataUrl) {
+        try {
+            // Create a temporary image
+            const img = new Image();
+            img.src = imageDataUrl;
+
+            await new Promise((resolve) => {
+                img.onload = resolve;
+            });
+
+            // Create a temporary canvas for analysis
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 160; // Reduce size for faster processing
+            tempCanvas.height = 120;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(img, 0, 0, 160, 120);
+
+            const imageData = tempCtx.getImageData(0, 0, 160, 120);
+            const data = imageData.data;
+
+            // Simple skin tone detection
+            let skinPixels = 0;
+            let totalPixels = 0;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                totalPixels++;
+
+                // Simple skin tone detection (HSV-based approximation)
+                // Skin tones typically have: R > 95, G > 40, B > 20, R > G, R > B
+                if (r > 95 && g > 40 && b > 20 &&
+                    r > g && r > b &&
+                    Math.abs(r - g) > 15) {
+                    skinPixels++;
+                }
+            }
+
+            const skinRatio = skinPixels / totalPixels;
+
+            // If more than 8% of pixels are skin-colored, assume face is present
+            return skinRatio > 0.08 ? { skinRatio } : null;
+
+        } catch (error) {
+            console.error('Face detection error:', error);
+            return null;
+        }
+    }
+
+    function calculateImageBrightness() {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        let sum = 0;
+
+        for (let i = 0; i < data.length; i += 4) {
+            // Calculate luminance using standard formula (ITU-R BT.709)
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            sum += (0.2126 * r + 0.7152 * g + 0.0722 * b);
+        }
+
+        return sum / (data.length / 4);
+    }
+
+    function calculateFaceSize(faceDetection) {
+        // Estimate face size based on skin pixel ratio
+        // This is a simplified approach
+        return faceDetection.skinRatio * 2; // Scale to approximate face area ratio
     }
     
     function updateIndicator(indicator, isGood) {
         indicator.className = 'quality-indicator ' + (isGood ? 'good' : 'bad');
-    }
-    
-    function calculateBrightness(canvas, faceBox) {
-        const imageData = ctx.getImageData(faceBox.x, faceBox.y, faceBox.width, faceBox.height);
-        const data = imageData.data;
-        let sum = 0;
-        
-        for (let i = 0; i < data.length; i += 4) {
-            // Calculate luminance using standard formula
-            sum += (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-        }
-        
-        return sum / (data.length / 4);
     }
     
     function capturePhoto() {
@@ -716,47 +883,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Hide camera container and indicators
         document.getElementById('video-container').style.display = 'none';
         document.getElementById('quality-indicators').style.display = 'none';
-    }
-    
-    async function performFinalQualityCheck(detections) {
-        const faceBox = detections.detection.box;
-        const faceArea = faceBox.width * faceBox.height;
-        const imageArea = canvas.width * canvas.height;
-        const faceRatio = faceArea / imageArea;
-        
-        // Check if face is properly sized
-        if (faceRatio < 0.1) {
-            return { passed: false, reason: 'rosto muito pequeno, aproxime-se da câmera' };
-        }
-        
-        if (faceRatio > 0.6) {
-            return { passed: false, reason: 'rosto muito próximo, afaste-se da câmera' };
-        }
-        
-        // Check brightness
-        const brightness = calculateBrightness(canvas, faceBox);
-        if (brightness < 50) {
-            return { passed: false, reason: 'imagem muito escura, melhore a iluminação' };
-        }
-        
-        if (brightness > 200) {
-            return { passed: false, reason: 'imagem muito clara, reduza a iluminação' };
-        }
-        
-        // Check if face is centered
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const faceCenterX = faceBox.x + faceBox.width / 2;
-        const faceCenterY = faceBox.y + faceBox.height / 2;
-        
-        const offsetX = Math.abs(faceCenterX - centerX);
-        const offsetY = Math.abs(faceCenterY - centerY);
-        
-        if (offsetX > canvas.width * 0.2 || offsetY > canvas.height * 0.2) {
-            return { passed: false, reason: 'centralize o rosto na câmera' };
-        }
-        
-        return { passed: true };
     }
     
     // Form validation
