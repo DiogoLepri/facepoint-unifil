@@ -445,7 +445,7 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<!-- face-api.js REMOVIDO - Agora usando Flask API (DeepFace + Facenet512) -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const video = document.getElementById('video');
@@ -457,30 +457,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let stream = null;
     let isProcessing = false;
-    let modelsLoaded = false;
+    let recognitionInterval = null;
 
-    // Check camera permissions on page load
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        console.log('getUserMedia is supported');
-    } else {
+    console.log('Sistema de login facial via Flask API inicializado');
+
+    // Check camera support
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         showStatus('Seu navegador não suporta acesso à câmera.', 'error');
         ativarBtn.disabled = true;
+        return;
     }
-
-    // Load face-api models from local files
-    const MODEL_URL = '/models';
-    
-    Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-    ]).then(() => {
-        modelsLoaded = true;
-        console.log('Face-api models loaded');
-    }).catch(error => {
-        console.error('Error loading models:', error);
-        showStatus('Erro ao carregar modelos de reconhecimento facial', 'error');
-    });
 
     function showStatus(message, type) {
         recognitionStatus.textContent = message;
@@ -493,11 +479,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     ativarBtn.addEventListener('click', async function() {
-        if (!modelsLoaded) {
-            showStatus('Aguarde o carregamento dos modelos...', 'processing');
-            return;
-        }
-
         if (isProcessing) return;
 
         try {
@@ -545,38 +526,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    let recognitionInterval;
-    
     function startContinuousRecognition() {
-        showStatus('Procurando rosto...', 'processing');
-        
+        showStatus('Procurando rosto e processando reconhecimento...', 'processing');
+
         recognitionInterval = setInterval(async () => {
             if (isProcessing) return;
-            
-            try {
-                // Detect face
-                const detections = await faceapi
-                    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                    .withFaceLandmarks()
-                    .withFaceDescriptor();
-                
-                if (detections) {
-                    clearInterval(recognitionInterval);
-                    await processRecognition(detections);
-                }
-            } catch (error) {
-                console.error('Error during continuous recognition:', error);
-            }
-        }, 1000); // Check every second
+
+            await captureAndRecognize();
+        }, 2000); // Captura e reconhece a cada 2 segundos
     }
-    
-    async function processRecognition(detections) {
-        isProcessing = true;
-        showStatus('Processando reconhecimento facial...', 'processing');
-        
-        const faceDescriptor = Array.from(detections.descriptor);
-        
+
+    async function captureAndRecognize() {
         try {
+            isProcessing = true;
+
+            // Configura canvas com dimensões do vídeo
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Captura frame atual do vídeo
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Converte para base64 (JPEG com qualidade 0.95)
+            const imageData = canvas.toDataURL('image/jpeg', 0.95);
+
+            console.log('Capturando frame e enviando para reconhecimento...');
+
+            // Envia para o endpoint /facial-login via Laravel → Flask
             const response = await fetch('/facial-login', {
                 method: 'POST',
                 headers: {
@@ -584,34 +561,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
                 body: JSON.stringify({
-                    face_descriptor: faceDescriptor
+                    face_descriptor: imageData  // Envia a imagem base64 diretamente
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success && data.requires_confirmation) {
+                // Match encontrado - para o reconhecimento e mostra modal
+                clearInterval(recognitionInterval);
                 showConfirmationModal(data.user_name);
             } else if (data.success) {
-                // Direct login without confirmation (shouldn't happen now)
-                showStatus('Redirecionando...', 'success');
+                // Login direto (caso o sistema esteja configurado assim)
+                clearInterval(recognitionInterval);
+                showStatus('Reconhecido! Redirecionando...', 'success');
                 setTimeout(() => {
                     window.location.href = data.redirect || '/dashboard';
                 }, 1500);
             } else {
-                showStatus(data.message || 'Falha no reconhecimento. Tentando novamente...', 'error');
-                setTimeout(() => {
-                    isProcessing = false;
-                    startContinuousRecognition();
-                }, 2000);
+                // Nenhum match - continua tentando
+                console.log('Nenhum match encontrado, continuando reconhecimento...');
             }
+
         } catch (error) {
-            console.error('Error:', error);
-            showStatus('Erro ao processar reconhecimento facial', 'error');
-            setTimeout(() => {
-                isProcessing = false;
-                startContinuousRecognition();
-            }, 2000);
+            console.error('Erro durante reconhecimento:', error);
+            showStatus('Erro ao processar frame. Tentando novamente...', 'error');
+        } finally {
+            isProcessing = false;
         }
     }
     

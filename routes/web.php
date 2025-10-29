@@ -32,7 +32,14 @@ Route::post('/facial-login', [AuthController::class, 'facialLogin'])->name('faci
 Route::post('/facial-login/confirm', [AuthController::class, 'confirmFacialLogin'])->name('facial.login.confirm');
 Route::post('/facial-login/reject', [AuthController::class, 'rejectFacialLogin'])->name('facial.login.reject');
 
-// API para reconhecimento facial
+// Cadastro facial (enrolment) - Acessível para qualquer usuário autenticado
+// IMPORTANTE: Aluno cadastra a própria biometria (validação feita no controller via Auth::id() === user_id)
+Route::middleware('auth')->post('/admin/facial/enrol', [\App\Http\Controllers\Admin\FaceEnrolmentController::class, 'store'])->name('admin.facial.enrol');
+
+// API para reconhecimento facial (reconhece rosto e registra ponto automaticamente)
+Route::post('/attendance/verify', [\App\Http\Controllers\AttendanceVerificationController::class, 'verify'])->name('attendance.verify');
+
+// API legacy (mantida para compatibilidade)
 Route::post('/api/attendance/verify', [AttendanceController::class, 'verify']);
 Route::get('/api/attendance/status', [AttendanceController::class, 'status']);
 

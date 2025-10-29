@@ -542,9 +542,7 @@
                         </label>
                     </div>
                     
-                    <input type="hidden" name="face_data" id="face_data">
-                    <input type="hidden" name="face_data_2" id="face_data_2">
-                    <input type="hidden" name="face_data_3" id="face_data_3">
+                    <!-- Campos face_data removidos - biometria agora é cadastrada via /admin/facial/enrol (ETAPA 2) -->
                 </div>
             </div>
             
@@ -558,7 +556,7 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<!-- face-api.js removido - agora usando Flask API (DeepFace + Facenet512) -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const video = document.getElementById('video');
@@ -575,29 +573,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let stream = null;
     let photoCaptured = false;
-    let faceDescriptor = null;
-    let modelsLoaded = false;
-    
-    // Load face-api models
-    const MODEL_URL = '/models';
-    
-    Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-    ]).then(() => {
-        modelsLoaded = true;
-        console.log('Face-api models loaded');
-    }).catch(error => {
-        console.error('Error loading models:', error);
-        alert('Erro ao carregar modelos de reconhecimento facial');
-    });
-    
+    let capturedImageData = null; // Base64 da foto capturada (será enviado na ETAPA 2)
+
+    // Using Flask API (DeepFace + Facenet512) - No need to load face-api models
+    console.log('Sistema de registro facial via Flask API inicializado (2 ETAPAS)');
+
     ativarCameraBtn.addEventListener('click', async function() {
-        if (!modelsLoaded) {
-            alert('Aguarde o carregamento dos modelos...');
-            return;
-        }
         
         try {
             // Request camera access
@@ -649,88 +630,20 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     function startRealTimeVerification() {
-        verificationInterval = setInterval(async () => {
-            if (photoCaptured) {
-                clearInterval(verificationInterval);
-                return;
-            }
-            
-            await performQualityCheck();
-        }, 500); // Check every 500ms
-    }
-    
-    async function performQualityCheck() {
-        // Set canvas dimensions to match video
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        
-        // Draw current video frame to canvas (correcting the mirroring)
-        ctx.save();
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-        ctx.restore();
-        
-        try {
-            // Detect face
-            const detections = await faceapi
-                .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
-                .withFaceLandmarks()
-                .withFaceDescriptor();
-            
-            const faceGuide = document.getElementById('face-guide');
-            const faceIndicator = document.getElementById('face-indicator');
-            const brightnessIndicator = document.getElementById('brightness-indicator');
-            const sizeIndicator = document.getElementById('size-indicator');
-            
-            if (detections) {
-                // Face detected
-                qualityStatus.face = true;
-                faceGuide.classList.add('detected');
-                updateIndicator(faceIndicator, true);
-                
-                // Check face size (relative to image)
-                const faceBox = detections.detection.box;
-                const faceArea = faceBox.width * faceBox.height;
-                const imageArea = canvas.width * canvas.height;
-                const faceRatio = faceArea / imageArea;
-                
-                qualityStatus.size = faceRatio > 0.1 && faceRatio < 0.6; // Face should be 10-60% of image
-                updateIndicator(sizeIndicator, qualityStatus.size);
-                
-                // Check brightness
-                const brightness = calculateBrightness(canvas, faceBox);
-                qualityStatus.brightness = brightness > 50 && brightness < 200; // Good range
-                updateIndicator(brightnessIndicator, qualityStatus.brightness);
-                
-            } else {
-                // No face detected
-                qualityStatus.face = false;
-                faceGuide.classList.remove('detected');
-                updateIndicator(faceIndicator, false);
-                updateIndicator(sizeIndicator, false);
-                updateIndicator(brightnessIndicator, false);
-            }
-            
-            // Update button state and message
-            const allGood = qualityStatus.face && qualityStatus.brightness && qualityStatus.size;
-            ativarCameraBtn.disabled = !allGood;
-            
-            if (allGood) {
-                cameraStatus.textContent = '✓ Qualidade boa! Clique para capturar';
+        // Simplified: Just enable the capture button after a short delay
+        setTimeout(() => {
+            if (!photoCaptured) {
+                ativarCameraBtn.disabled = false;
                 ativarCameraBtn.style.backgroundColor = '#28a745';
-            } else {
-                let issues = [];
-                if (!qualityStatus.face) issues.push('rosto não detectado');
-                if (!qualityStatus.brightness) issues.push('ajuste a iluminação');
-                if (!qualityStatus.size) issues.push('ajuste a distância');
-                
-                cameraStatus.textContent = 'Aguardando: ' + issues.join(', ');
-                ativarCameraBtn.style.backgroundColor = '#6c757d';
+                cameraStatus.textContent = '✓ Posicione seu rosto e clique para capturar';
             }
-            
-        } catch (error) {
-            console.error('Error during quality check:', error);
-        }
+        }, 1000);
+    }
+
+    async function performQualityCheck() {
+        // Simplified version without face-api.js
+        // Flask API will do the face detection when capturing
+        cameraStatus.textContent = 'Posicione seu rosto no centro...';
     }
     
     function updateIndicator(indicator, isGood) {
@@ -750,93 +663,59 @@ document.addEventListener('DOMContentLoaded', function() {
         return sum / (data.length / 4);
     }
     
-    async function capturePhoto() {
+    function capturePhoto() {
         if (photoCaptured) return;
-        
+
         // Stop real-time verification
         clearInterval(verificationInterval);
-        
+
         ativarCameraBtn.disabled = true;
-        cameraStatus.textContent = 'Capturando e verificando qualidade...';
-        
+        cameraStatus.textContent = 'Capturando foto...';
+
         // Set canvas dimensions to match video
         canvas.width = video.videoWidth || 640;
         canvas.height = video.videoHeight || 480;
-        
+
         // Draw video frame to canvas (correcting the mirroring)
         ctx.save();
         ctx.scale(-1, 1);
         ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
         ctx.restore();
-        
-        try {
-            // Final quality check
-            const detections = await faceapi
-                .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
-                .withFaceLandmarks()
-                .withFaceDescriptor();
-            
-            if (detections) {
-                // Additional quality validation
-                const qualityCheck = await performFinalQualityCheck(detections);
-                
-                if (qualityCheck.passed) {
-                    // Save face descriptor (create 3 copies for backward compatibility)
-                    faceDescriptor = Array.from(detections.descriptor);
-                    document.getElementById('face_data').value = JSON.stringify(faceDescriptor);
-                    document.getElementById('face_data_2').value = JSON.stringify(faceDescriptor);
-                    document.getElementById('face_data_3').value = JSON.stringify(faceDescriptor);
-                    
-                    // Update photo preview
-                    const photoItem = document.getElementById('photo-1');
-                    const img = photoItem.querySelector('img');
-                    
-                    // Create high-quality image data
-                    const imageData = canvas.toDataURL('image/jpeg', 0.95);
-                    
-                    img.src = imageData;
-                    img.onload = function() {
-                        photoItem.style.display = 'block';
-                        console.log('High-quality photo captured and displayed');
-                    };
-                    
-                    // Update progress
-                    progressBar.style.width = '100%';
-                    photoCaptured = true;
-                    
-                    cameraStatus.textContent = '✓ Foto de alta qualidade capturada!';
-                    ativarCameraBtn.textContent = 'FOTO CAPTURADA ✓';
-                    ativarCameraBtn.style.backgroundColor = '#28a745';
-                    
-                    // Stop camera
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                    }
-                    
-                    // Hide camera container and indicators
-                    document.getElementById('video-container').style.display = 'none';
-                    document.getElementById('quality-indicators').style.display = 'none';
-                    
-                } else {
-                    cameraStatus.textContent = 'Qualidade insuficiente: ' + qualityCheck.reason;
-                    ativarCameraBtn.disabled = false;
-                    ativarCameraBtn.textContent = 'TENTAR NOVAMENTE';
-                    startRealTimeVerification(); // Restart verification
-                }
-                
-            } else {
-                cameraStatus.textContent = 'Nenhum rosto detectado durante a captura. Tente novamente.';
-                ativarCameraBtn.disabled = false;
-                ativarCameraBtn.textContent = 'TENTAR NOVAMENTE';
-                startRealTimeVerification(); // Restart verification
-            }
-        } catch (error) {
-            console.error('Error during face capture:', error);
-            cameraStatus.textContent = 'Erro durante captura. Tente novamente.';
-            ativarCameraBtn.disabled = false;
-            ativarCameraBtn.textContent = 'TENTAR NOVAMENTE';
-            startRealTimeVerification(); // Restart verification
+
+        // Create high-quality image data (base64)
+        const imageData = canvas.toDataURL('image/jpeg', 0.95);
+
+        // SALVAR NA VARIÁVEL GLOBAL (será enviado na ETAPA 2)
+        capturedImageData = imageData;
+
+        console.log('✓ Foto capturada e salva em memória (tamanho:', imageData.length, 'bytes)');
+
+        // Update photo preview
+        const photoItem = document.getElementById('photo-1');
+        const img = photoItem.querySelector('img');
+
+        img.src = imageData;
+        img.onload = function() {
+            photoItem.style.display = 'block';
+            console.log('Preview da foto exibido');
+        };
+
+        // Update progress
+        progressBar.style.width = '100%';
+        photoCaptured = true;
+
+        cameraStatus.textContent = '✓ Foto capturada com sucesso!';
+        ativarCameraBtn.textContent = 'FOTO CAPTURADA ✓';
+        ativarCameraBtn.style.backgroundColor = '#28a745';
+
+        // Stop camera
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
         }
+
+        // Hide camera container and indicators
+        document.getElementById('video-container').style.display = 'none';
+        document.getElementById('quality-indicators').style.display = 'none';
     }
     
     async function performFinalQualityCheck(detections) {
@@ -881,11 +760,122 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Form validation
-    document.getElementById('registration-form').addEventListener('submit', function(e) {
-        if (!photoCaptured) {
-            e.preventDefault();
-            alert('Por favor, capture sua foto para o registro facial.');
+    // FLUXO DE 2 ETAPAS: Cadastro de Usuário + Cadastro Facial via Flask
+    document.getElementById('registration-form').addEventListener('submit', async function(e) {
+        e.preventDefault(); // Sempre previne submit normal do form
+
+        // Validação: Foto obrigatória
+        if (!photoCaptured || !capturedImageData) {
+            alert('❌ Por favor, capture sua foto antes de finalizar o cadastro.');
             return false;
+        }
+
+        const submitBtn = document.getElementById('submit-btn');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        try {
+            // =============================================
+            // ETAPA 1: CRIAR USUÁRIO (/register)
+            // =============================================
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'CRIANDO USUÁRIO...';
+
+            console.log('[ETAPA 1] Criando usuário via POST /register');
+
+            const formData = new FormData(this);
+
+            const registerResponse = await fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: formData,
+                credentials: 'same-origin'
+            });
+
+            const registerData = await registerResponse.json();
+
+            if (!registerResponse.ok || !registerData.success) {
+                const errorMessage = registerData.message || 'Erro ao criar usuário';
+                throw new Error(errorMessage);
+            }
+
+            const createdUserId = registerData.user_id;
+
+            if (!createdUserId) {
+                throw new Error('Servidor não retornou user_id');
+            }
+
+            console.log('[ETAPA 1] ✓ Usuário criado com sucesso. user_id:', createdUserId);
+
+            // =============================================
+            // ETAPA 2: CADASTRAR BIOMETRIA (/admin/facial/enrol)
+            // =============================================
+            submitBtn.textContent = 'CADASTRANDO BIOMETRIA...';
+
+            console.log('[ETAPA 2] Cadastrando biometria via POST /admin/facial/enrol');
+
+            const enrolResponse = await fetch('/admin/facial/enrol', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: createdUserId,
+                    image_data: capturedImageData  // Base64 da foto capturada
+                }),
+                credentials: 'same-origin'
+            });
+
+            const enrolData = await enrolResponse.json();
+
+            console.log('[ETAPA 2] Resposta enrol:', enrolData);
+
+            if (!enrolData.ok || enrolData.ok !== true) {
+                // Falha no cadastro facial
+                const stage = enrolData.stage || 'unknown';
+                const error = enrolData.error || 'Erro desconhecido ao cadastrar biometria';
+
+                console.error('[ETAPA 2] ✗ Falha:', stage, error);
+
+                let userMessage = `❌ Erro ao cadastrar biometria facial:\n\n${error}`;
+
+                if (stage === 'flask_failed') {
+                    userMessage += '\n\nMotivo: O sistema de reconhecimento facial não detectou um rosto válido na imagem.';
+                    userMessage += '\n\nTente tirar outra foto com melhor iluminação.';
+                } else if (stage === 'flask_unreachable') {
+                    userMessage += '\n\nMotivo: Não foi possível conectar ao serviço de reconhecimento facial.';
+                    userMessage += '\n\nContate o administrador.';
+                }
+
+                alert(userMessage);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'FINALIZAR CADASTRO';
+                return false;
+            }
+
+            // =============================================
+            // SUCESSO COMPLETO!
+            // =============================================
+            console.log('[ETAPA 2] ✓ Biometria cadastrada com sucesso!');
+            console.log('✓✓✓ CADASTRO COMPLETO! Redirecionando para /dashboard...');
+
+            submitBtn.textContent = 'CADASTRO CONCLUÍDO ✓';
+            submitBtn.style.backgroundColor = '#28a745';
+
+            alert('✅ Cadastro realizado com sucesso!\n\nSeu rosto foi cadastrado no sistema.');
+
+            // Redirecionar para dashboard
+            window.location.href = '/dashboard';
+
+        } catch (error) {
+            console.error('Erro durante cadastro:', error);
+            alert('❌ Erro ao realizar cadastro:\n\n' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'FINALIZAR CADASTRO';
         }
     });
     

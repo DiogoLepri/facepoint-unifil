@@ -60,15 +60,14 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
+        // Validação dos campos APENAS de dados pessoais
+        // NÃO valida face_data - a biometria será cadastrada na ETAPA 2 via /admin/facial/enrol
         $request->validate([
             'name' => 'required|string|max:255|regex:/^[A-Za-zÀ-ÿ\s]+$/',
             'email' => 'required|string|email|max:255|unique:users|regex:/^[a-zA-Z0-9._%+-]+@edu\.unifil\.br$/',
             'matricula' => 'required|string|size:9|regex:/^[0-9]{9}$/|unique:users',
             'curso' => 'required|string|in:Ciencia da Computacao,Engenharia de Software',
             'password' => 'required|string|min:8|confirmed',
-            'face_data' => 'required|string',
-            'face_data_2' => 'required|string',
-            'face_data_3' => 'required|string',
         ], [
             'name.regex' => 'O nome deve conter apenas letras e espaços.',
             'email.regex' => 'O email deve terminar com @edu.unifil.br',
@@ -80,6 +79,7 @@ class AuthController extends Controller
         try {
             \DB::beginTransaction();
 
+            // ETAPA 1: Criar usuário (somente dados pessoais)
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
@@ -89,38 +89,31 @@ class AuthController extends Controller
                 'role' => 'aluno',
             ]);
 
-            $faceDescriptors = [
-                $request->face_data,
-                $request->face_data_2,
-                $request->face_data_3,
-            ];
-
-            if (empty($request->face_data) || empty($request->face_data_2) || empty($request->face_data_3)) {
-                throw new \Exception('É necessário fornecer os três descritores faciais para o cadastro.');
-            }
-
-            foreach ($faceDescriptors as $index => $descriptor) {
-                RecognitionRecord::create([
-                    'user_id' => $user->id,
-                    'face_descriptor' => $descriptor,
-                    'capture_type' => 'registration_' . ($index + 1),
-                ]);
-
-                \Log::debug("Facial descriptor $index saved successfully for user ID: " . $user->id);
-            }
-
             \DB::commit();
 
+            \Log::info("User registered successfully", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+            ]);
+
+            // Fazer login do usuário
             Auth::login($user);
 
-            return redirect()->route('dashboard')->with('success', 'Cadastro realizado com sucesso!');
+            // Retornar JSON com user_id para o frontend continuar com enrolment facial
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuário cadastrado com sucesso',
+                'user_id' => $user->id,
+            ], 201);
+
         } catch (\Exception $e) {
             \DB::rollBack();
             \Log::error('Registration error: ' . $e->getMessage());
 
-            return back()->withInput()->withErrors([
-                'error' => 'Erro ao criar usuário: ' . $e->getMessage()
-            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao criar usuário: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -128,10 +121,10 @@ class AuthController extends Controller
     {
         try {
             \Log::info('Facial login attempt started');
-            
+
             // Get data from the request body
             $data = $request->json()->all();
-            
+
             if (empty($data)) {
                 \Log::warning('Empty request data received');
                 return response()->json([
@@ -139,172 +132,159 @@ class AuthController extends Controller
                     'message' => 'Dados não recebidos corretamente. Tente novamente.'
                 ], 400);
             }
-            
+
             \Log::info('Request data received', ['data_keys' => array_keys($data)]);
-            
-            // Check if face_descriptor exists
+
+            // Check if face_descriptor (image_data) exists
             if (!isset($data['face_descriptor'])) {
-                \Log::warning('Face descriptor not found in request');
+                \Log::warning('Face descriptor (image_data) not found in request');
                 return response()->json([
                     'success' => false,
-                    'message' => 'Descritor facial não encontrado na requisição'
+                    'message' => 'Imagem não encontrada na requisição'
                 ], 400);
             }
-            
-            $inputDescriptor = $data['face_descriptor'];
-            
-            // Check if descriptor is an array
-            if (!is_array($inputDescriptor)) {
-                \Log::warning('Face descriptor is not an array', ['type' => gettype($inputDescriptor)]);
+
+            $imageData = $data['face_descriptor'];
+
+            // Validate image data is a string (base64)
+            if (!is_string($imageData) || empty($imageData)) {
+                \Log::warning('Invalid image data format');
                 return response()->json([
                     'success' => false,
-                    'message' => 'Formato de descritor facial inválido'
+                    'message' => 'Formato de imagem inválido'
                 ], 400);
             }
-            
-            // Log the descriptor for debugging
-            \Log::info('Received descriptor length: ' . count($inputDescriptor));
-            
-            // Get all users with facial recognition records
-            $users = User::whereHas('recognitionRecords')->with('recognitionRecords')->get();
-            
-            if ($users->isEmpty()) {
+
+            \Log::info('Image data received, length: ' . strlen($imageData) . ' characters');
+
+            // STEP 1: Get all users with facial recognition records
+            $recognitionRecords = RecognitionRecord::whereNotNull('face_descriptor')->get();
+
+            if ($recognitionRecords->isEmpty()) {
                 \Log::warning('No users with recognition records found');
                 return response()->json([
                     'success' => false,
                     'message' => 'Nenhum usuário cadastrado com reconhecimento facial'
                 ], 404);
             }
-            
-            $bestMatch = null;
-            $recognitionThreshold = config('deepface.recognition_threshold', 0.4); // Configurable threshold
-            $bestMatchDistance = PHP_FLOAT_MAX; // Initialize to maximum value
-            $matchedRecord = null;
-            
-            \Log::info('Starting facial recognition with threshold: ' . $recognitionThreshold);
-            
-            $totalComparisons = 0;
-            $validComparisons = 0;
-            
-            foreach ($users as $user) {
-                \Log::debug("Checking user ID: " . $user->id);
-                foreach ($user->recognitionRecords as $record) {
-                    $totalComparisons++;
-                    try {
-                        if (empty($record->face_descriptor)) {
-                            \Log::warning('Empty face descriptor for record ID: ' . $record->id);
-                            continue;
-                        }
-                        
-                        // Get the stored descriptor
-                        $storedDescriptor = $record->face_descriptor;
-                        
-                        // If it's a string (JSON), decode it
-                        if (is_string($storedDescriptor)) {
-                            $storedDescriptor = json_decode($storedDescriptor, true);
-                            if (json_last_error() !== JSON_ERROR_NONE) {
-                                \Log::warning('Failed to decode JSON descriptor for record ID: ' . $record->id);
-                                continue;
-                            }
-                        }
-                        
-                        // Ensure we have an array
-                        if (!is_array($storedDescriptor)) {
-                            \Log::warning('Invalid face descriptor for record ID: ' . $record->id);
-                            continue;
-                        }
-                        
-                        // Check descriptor length match
-                        if (count($storedDescriptor) !== count($inputDescriptor)) {
-                            \Log::warning('Descriptor length mismatch: stored=' . count($storedDescriptor) . ', input=' . count($inputDescriptor));
-                            continue;
-                        }
-                        
-                        // Validate descriptor values are numeric
-                        if (!$this->validateDescriptorValues($inputDescriptor) || !$this->validateDescriptorValues($storedDescriptor)) {
-                            \Log::warning('Invalid descriptor values for record ID: ' . $record->id);
-                            continue;
-                        }
-                        
-                        $validComparisons++;
-                        $distance = $this->calculateEuclideanDistance($inputDescriptor, $storedDescriptor);
-                        
-                        \Log::info('User ID: ' . $user->id . ', Record ID: ' . $record->id . ', Distance: ' . $distance . ', Threshold: ' . $recognitionThreshold);
-                        
-                        // Only consider matches below the threshold AND better than current best
-                        if ($distance < $recognitionThreshold && $distance < $bestMatchDistance) {
-                            $bestMatchDistance = $distance;
-                            $bestMatch = $user;
-                            $matchedRecord = $record;
-                            \Log::info('New best match found: User ID ' . $user->id . ' with distance ' . $distance);
-                        }
-                    } catch (\Exception $e) {
-                        \Log::error('Error processing record ID ' . $record->id . ': ' . $e->getMessage());
-                        continue;
-                    }
+
+            // STEP 2: Prepare known embeddings for Flask
+            $knownEmbeddings = [];
+            foreach ($recognitionRecords as $record) {
+                $faceDescriptor = $record->face_descriptor;
+
+                // If it's a string (JSON), decode it
+                if (is_string($faceDescriptor)) {
+                    $faceDescriptor = json_decode($faceDescriptor, true);
+                }
+
+                // Ensure we have a valid array
+                if (is_array($faceDescriptor) && !empty($faceDescriptor)) {
+                    $knownEmbeddings[] = [
+                        'user_id' => $record->user_id,
+                        'embedding' => $faceDescriptor
+                    ];
+                } else {
+                    \Log::warning('Invalid face descriptor for record ID: ' . $record->id);
                 }
             }
-            
-            \Log::info('Recognition completed', [
-                'total_comparisons' => $totalComparisons,
-                'valid_comparisons' => $validComparisons,
-                'best_distance' => $bestMatchDistance,
-                'threshold' => $recognitionThreshold,
-                'match_found' => $bestMatch !== null
+
+            if (empty($knownEmbeddings)) {
+                \Log::warning('No valid embeddings found');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nenhum embedding válido encontrado no banco de dados'
+                ], 404);
+            }
+
+            \Log::info('Prepared ' . count($knownEmbeddings) . ' known embeddings for Flask');
+
+            // STEP 3: Call Flask API /recognize_face to do the matching
+            \Log::info('Calling Flask API /recognize_face...');
+
+            $flaskResponse = \Http::timeout(30)->post('http://localhost:5001/recognize_face', [
+                'image_data' => $imageData,
+                'known_embeddings' => $knownEmbeddings,
             ]);
-            
-            if ($bestMatch && $bestMatchDistance < $recognitionThreshold) {
-                \Log::info('Valid facial match found', [
-                    'user_id' => $bestMatch->id,
-                    'user_name' => $bestMatch->name,
-                    'distance' => $bestMatchDistance,
-                    'threshold' => $recognitionThreshold
+
+            if (!$flaskResponse->successful()) {
+                \Log::error('Flask API error', [
+                    'status' => $flaskResponse->status(),
+                    'body' => $flaskResponse->body()
                 ]);
-                
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erro ao processar reconhecimento facial'
+                ], 500);
+            }
+
+            $flaskData = $flaskResponse->json();
+            \Log::info('Flask response', ['data' => $flaskData]);
+
+            // STEP 4: Handle Flask response
+            if (isset($flaskData['success']) && $flaskData['success'] === true) {
+                // Match found!
+                $recognizedUserId = $flaskData['user_id'];
+                $distance = $flaskData['distance'];
+
+                $user = User::find($recognizedUserId);
+
+                if (!$user) {
+                    \Log::error('Recognized user ID not found: ' . $recognizedUserId);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Usuário reconhecido não encontrado no sistema'
+                    ], 404);
+                }
+
+                \Log::info('Valid facial match found', [
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'distance' => $distance
+                ]);
+
                 // Store match data in session for confirmation
                 session([
-                    'facial_match_user_id' => $bestMatch->id,
-                    'facial_match_distance' => $bestMatchDistance,
-                    'facial_match_descriptor' => $inputDescriptor,
+                    'facial_match_user_id' => $user->id,
+                    'facial_match_distance' => $distance,
                     'facial_match_timestamp' => time()
                 ]);
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Usuário reconhecido com sucesso',
-                    'user_name' => $bestMatch->name,
-                    'user_id' => $bestMatch->id,
+                    'user_name' => $user->name,
+                    'user_id' => $user->id,
                     'requires_confirmation' => true
                 ]);
+            } elseif (isset($flaskData['error'])) {
+                // Error from Flask (e.g., no face detected)
+                $errorMsg = $flaskData['error'];
+                \Log::warning('Flask error: ' . $errorMsg);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMsg
+                ], 400);
             } else {
                 // No match found
-                $logMessage = 'No facial match found for login attempt';
-                if ($bestMatch) {
-                    $logMessage .= ' - Best match was ' . $bestMatch->name . ' with distance ' . $bestMatchDistance . ' (threshold: ' . $recognitionThreshold . ')';
-                }
-                \Log::warning($logMessage);
-                
-                // Optional: Record failed attempt for security analysis
-                try {
-                    $failedAttemptDescriptor = json_encode($inputDescriptor);
-                    \Log::debug('Failed login attempt descriptor: ' . substr($failedAttemptDescriptor, 0, 100) . '...');
-                } catch (\Exception $e) {
-                    \Log::error('Error recording failed attempt: ' . $e->getMessage());
-                }
-                
+                $bestDistance = $flaskData['best_distance'] ?? 'unknown';
+                \Log::warning('No facial match found', ['best_distance' => $bestDistance]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Usuário não reconhecido. Por favor, tente novamente.'
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             \Log::error('Facial login error: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erro durante a verificação: ' . $e->getMessage()
