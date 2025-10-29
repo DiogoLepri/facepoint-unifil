@@ -33,10 +33,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configurações do modelo
-MODEL_NAME = 'Facenet512'  # 512 dimensões (alta acurácia)
+
+MODEL_NAME = 'Facenet512'  
 DETECTOR_BACKEND = 'opencv'
-THRESHOLD = 10.0  # Distância euclidiana threshold para Facenet512 (padrão DeepFace)
+THRESHOLD = 15.0  # Distância euclidiana threshold para Facenet512 (padrão DeepFace)
 
 logger.info("=" * 80)
 logger.info("FacePoint UniFil - DeepFace API")
