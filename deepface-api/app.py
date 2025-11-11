@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 MODEL_NAME = 'Facenet512'  
 DETECTOR_BACKEND = 'opencv'
-THRESHOLD = 15.0  # Distância euclidiana threshold para Facenet512 (padrão DeepFace)
+THRESHOLD = 20.0  
 
 logger.info("=" * 80)
 logger.info("FacePoint UniFil - DeepFace API")
@@ -46,7 +46,7 @@ logger.info(f"Threshold: {THRESHOLD}")
 logger.info("=" * 80)
 
 
-def base64_to_image(img_b64: str) -> np.ndarray:
+def base64_to_image(img_b64: str) -> np.ndarray: #função de conversão
     """
     Converte imagem base64 para array numpy OpenCV.
     Aceita tanto "data:image/jpeg;base64,..." quanto base64 puro.
@@ -84,7 +84,7 @@ def base64_to_image(img_b64: str) -> np.ndarray:
         raise ValueError(f"Erro ao decodificar imagem: {str(e)}")
 
 
-def euclidean_distance(a: list, b: list) -> float:
+def euclidean_distance(a: list, b: list) -> float:#Calcula distância euclidiana
     """
     Calcula distância euclidiana entre dois vetores.
 
@@ -116,7 +116,7 @@ def health_check():
     }), 200
 
 
-@app.route('/extract_embedding', methods=['POST'])
+@app.route('/extract_embedding', methods=['POST'])#Cadastro facial
 def extract_embedding():
     """
     Extrai embedding facial de uma imagem (usado no cadastro/enrolment).
@@ -152,12 +152,12 @@ def extract_embedding():
         image_data = data['image_data']
         logger.info(f"Recebido image_data: {len(image_data)} caracteres")
 
-        # Converte base64 para imagem OpenCV
+     
         logger.info("Convertendo base64 para imagem...")
         img = base64_to_image(image_data)
         logger.info(f"Imagem decodificada: {img.shape[1]}x{img.shape[0]} pixels")
 
-        # Extrai embedding usando DeepFace
+
         logger.info(f"Extraindo embedding com {MODEL_NAME}...")
         embeddings = DeepFace.represent(
             img_path=img,
@@ -203,7 +203,7 @@ def extract_embedding():
         }), 500
 
 
-@app.route('/recognize_face', methods=['POST'])
+@app.route('/recognize_face', methods=['POST'])#Reconhecimento facial
 def recognize_face():
     """
     Reconhece um rosto comparando com embeddings conhecidos.

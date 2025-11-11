@@ -24,11 +24,11 @@ return [
 
     'max_image_size' => env('DEEPFACE_MAX_IMAGE_SIZE', 5242880), // 5MB
 
-    'model' => env('DEEPFACE_MODEL', 'Facenet128'),
+    'model' => env('DEEPFACE_MODEL', 'Facenet512'),
 
     'detector' => env('DEEPFACE_DETECTOR', 'opencv'),
 
-    'distance_metric' => env('DEEPFACE_DISTANCE_METRIC', 'cosine'),
+    'distance_metric' => env('DEEPFACE_DISTANCE_METRIC', 'euclidean'),
 
     'user_prefix' => env('DEEPFACE_USER_PREFIX', 'user_'),
 
@@ -71,7 +71,7 @@ return [
 
     'mock_responses' => env('DEEPFACE_MOCK_RESPONSES', false),
 
-    // Recognition threshold (0.4 para cosine distance com FaceNet512)
-    'recognition_threshold' => env('DEEPFACE_RECOGNITION_THRESHOLD', 0.4),
+    // Recognition threshold (15.0 para euclidean distance com FaceNet512)
+    'recognition_threshold' => env('DEEPFACE_RECOGNITION_THRESHOLD', 20.0),
 
 ];

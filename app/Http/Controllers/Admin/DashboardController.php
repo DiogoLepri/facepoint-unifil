@@ -6,17 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\AttendanceRecord;
 use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf; #Dompdf
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        // Contar usuários ativos
+      
         $activeUsers = User::where('role', 'aluno')->count();
         
-        // Obter registros recentes
+    
         $recentActivity = AttendanceRecord::with('user')
             ->orderBy('created_at', 'desc')
             ->limit(10)
@@ -27,7 +27,7 @@ class DashboardController extends Controller
     
     public function reports()
     {
-        // Buscar todos os usuários alunos para o dropdown
+
         $users = User::where('role', 'aluno')->orderBy('name')->get();
         
         return view('admin.relatorios.index', compact('users'));
@@ -62,7 +62,7 @@ class DashboardController extends Controller
             // Buscar dados para o relatório
             $data = $this->getReportData($reportType, $startDate, $endDate, $filterBy, $userId);
             
-            // Gerar PDF baseado no período
+          
             $pdf = $this->generatePdfByPeriod($reportPeriod, $reportType, $data, $startDate, $endDate, $filterBy, $userId);
             
             $filename = $this->generateFilename($reportPeriod, $reportType, $startDate, $endDate);
@@ -107,8 +107,7 @@ class DashboardController extends Controller
     {
         $query = AttendanceRecord::with('user')
             ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
-        
-        // Se é relatório por usuário, filtrar pelo usuário específico
+
         if ($reportType === 'user' && $userId) {
             $query->where('user_id', $userId);
         } elseif ($filterBy) {
@@ -119,9 +118,9 @@ class DashboardController extends Controller
         
         $attendances = $query->orderBy('created_at', 'desc')->get();
         
-        // Calcular estatísticas
+
         if ($reportType === 'user' && $userId) {
-            $totalStudents = 1; // Para relatório de usuário específico
+            $totalStudents = 1; 
             $uniqueStudents = $attendances->pluck('user_id')->unique()->count();
         } else {
             $totalStudents = User::where('role', 'aluno')->when($filterBy, function($q) use ($filterBy) {
@@ -132,7 +131,7 @@ class DashboardController extends Controller
         
         $totalRecords = $attendances->count();
 
-        // Calcular total de horas trabalhadas
+
         $totalMinutes = 0;
         foreach ($attendances as $attendance) {
             if ($attendance->entry_time && $attendance->exit_time) {
@@ -161,7 +160,7 @@ class DashboardController extends Controller
         ];
     }
     
-    private function generatePdfByPeriod($period, $reportType, $data, $startDate, $endDate, $filterBy, $userId = null)
+    private function generatePdfByPeriod($period, $reportType, $data, $startDate, $endDate, $filterBy, $userId = null) #gerar pdf
     {
         // Determinar nome do curso para exibição
         if (empty($filterBy)) {
@@ -223,7 +222,7 @@ class DashboardController extends Controller
             'report_type' => $reportType,
         ];
         
-        return PDF::loadView('admin.reports.pdf-template', $viewData)
+        return PDF::loadView('admin. reports.pdf-template', $viewData)
             ->setPaper('a4', 'portrait')
             ->setOptions(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => true]);
     }

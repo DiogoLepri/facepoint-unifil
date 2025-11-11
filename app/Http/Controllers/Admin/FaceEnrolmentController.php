@@ -11,13 +11,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Controller responsável pelo cadastro facial (enrolment) de usuários.
- *
- * Este controller se comunica com a API Flask stateless (http://localhost:5001)
- * para extrair embeddings faciais usando DeepFace/Facenet512.
- *
- * NÃO salva imagens em disco - apenas armazena o embedding (vetor de 512 floats)
- * no banco de dados MySQL na tabela recognition_records.
+ * 
  */
 class FaceEnrolmentController extends Controller
 {
@@ -60,15 +54,13 @@ class FaceEnrolmentController extends Controller
         // Validação dos campos obrigatórios
         $validated = $request->validate([
             'user_id' => 'required|integer|exists:users,id',
-            'image_data' => 'required|string',
+            'image_data' => 'required|string',                  // !Espera string base64
         ]);
 
         $userId = (int) $validated['user_id'];
         $imageData = $validated['image_data'];
 
-        // ========================================
-        // SEGURANÇA: Verificar se o usuário logado está cadastrando a própria biometria
-        // ========================================
+        
         $loggedInId = Auth::id();
 
         if ($loggedInId !== $userId) {
@@ -87,9 +79,7 @@ class FaceEnrolmentController extends Controller
             ], 403);
         }
 
-        // ========================================
-        // LOG INICIAL
-        // ========================================
+ 
         Log::info('[ENROL] Iniciando envio para Flask', [
             'user_id' => $userId,
             'has_image_data' => strlen($imageData) > 30,
@@ -100,16 +90,13 @@ class FaceEnrolmentController extends Controller
             // Verifica se o usuário existe
             $user = User::findOrFail($userId);
 
-            // ========================================
-            // CHAMAR FLASK API
-            // ========================================
             Log::info('[ENROL] Chamando Flask API /extract_embedding para user_id=' . $userId);
 
             $response = Http::timeout(30)->post(self::FLASK_API_URL . '/extract_embedding', [
                 'image_data' => $imageData,
             ]);
 
-            // Verifica se a requisição foi bem-sucedida
+            // !Verifica se a requisição foi bem-sucedida
             if (!$response->successful()) {
                 Log::error('[ENROL] Flask não respondeu corretamente', [
                     'user_id' => $userId,
@@ -168,17 +155,15 @@ class FaceEnrolmentController extends Controller
             Log::info('[ENROL] Embedding extraído com sucesso', [
                 'user_id' => $userId,
                 'dimensions' => $dimensions,
-                'embedding_sample' => array_slice($embedding, 0, 3), // Primeiros 3 valores para debug
+                'embedding_sample' => array_slice($embedding, 0, 3), 
             ]);
 
-            // ========================================
-            // SALVAR NO BANCO
-            // ========================================
+        
             $recognitionRecord = RecognitionRecord::where('user_id', $userId)->first();
 
             if ($recognitionRecord) {
-                // Atualiza o embedding existente
-                $recognitionRecord->face_descriptor = $embedding; // Cast automático para JSON pelo Model
+          
+                $recognitionRecord->face_descriptor = $embedding; 
                 $recognitionRecord->capture_type = 'enrolment';
                 $recognitionRecord->updated_at = now();
                 $recognitionRecord->save();
@@ -188,10 +173,10 @@ class FaceEnrolmentController extends Controller
                     'dimensions' => $dimensions,
                 ]);
             } else {
-                // Cria novo registro de reconhecimento
+                // !Cria novo registro de reconhecimento salvar embedding no banco
                 $recognitionRecord = RecognitionRecord::create([
                     'user_id' => $userId,
-                    'face_descriptor' => $embedding, // Cast automático para JSON pelo Model
+                    'face_descriptor' => $embedding, 
                     'capture_type' => 'enrolment',
                 ]);
 
@@ -201,9 +186,7 @@ class FaceEnrolmentController extends Controller
                 ]);
             }
 
-            // ========================================
-            // SUCESSO!
-            // ========================================
+  
             Log::info('[ENROL] Cadastro facial concluído com sucesso', [
                 'user_id' => $userId,
                 'record_id' => $recognitionRecord->id,

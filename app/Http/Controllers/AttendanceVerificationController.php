@@ -9,19 +9,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-/**
- * Controller responsável pelo reconhecimento facial e registro de ponto.
- *
- * Este controller se comunica com a API Flask stateless (http://localhost:5001)
- * para reconhecer rostos usando DeepFace/Facenet512 e registrar ponto automaticamente.
- *
- * NÃO salva imagens em disco - apenas processa embeddings em memória.
- */
+
 class AttendanceVerificationController extends Controller
 {
-    /**
-     * URL da API Flask de reconhecimento facial
-     */
+
     private const FLASK_API_URL = 'http://localhost:5001';
 
     /**
@@ -71,7 +62,7 @@ class AttendanceVerificationController extends Controller
 
         Log::info("Iniciando verificação facial (reconhecimento + registro de ponto)");
 
-        try {
+        try { //!Busca embeddings conhecidos e chama Flask API
             // ETAPA 1: Montar array de embeddings conhecidos
             // Busca TODOS os usuários que já têm embedding cadastrado em recognition_records
             Log::info("Buscando embeddings cadastrados no banco MySQL...");
@@ -220,7 +211,7 @@ class AttendanceVerificationController extends Controller
             ], 500);
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            // Erro de conexão com Flask (offline, timeout, etc)
+            // Erro de conexão com Flask 
             Log::error("Erro de conexão com Flask API", [
                 'error' => $e->getMessage(),
             ]);
@@ -232,7 +223,7 @@ class AttendanceVerificationController extends Controller
             ], 500);
 
         } catch (\Exception $e) {
-            // Erro inesperado
+            // Erro
             Log::error("Erro inesperado na verificação facial", [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

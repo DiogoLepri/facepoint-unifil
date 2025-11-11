@@ -130,10 +130,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Executar na inicialização
+  
     toggleUserSelection();
     
-    // Executar quando mudar o tipo de relatório
+   
     reportTypeSelect.addEventListener('change', toggleUserSelection);
 });
 </script>
