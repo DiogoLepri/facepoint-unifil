@@ -53,7 +53,7 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ route('users.index') }}">
-                    <i class="fas fa-users me-2"></i>Alunos
+                    <i class="fas fa-users me-2"></i>Aluno
                 </a>
             </li>
         </ul>
