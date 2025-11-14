@@ -222,7 +222,7 @@ class DashboardController extends Controller
             'report_type' => $reportType,
         ];
         
-        return PDF::loadView('admin. reports.pdf-template', $viewData)
+        return PDF::loadView('admin.reports.pdf-template', $viewData)
             ->setPaper('a4', 'portrait')
             ->setOptions(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => true]);
     }
