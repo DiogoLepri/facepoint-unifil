@@ -531,21 +531,6 @@
                         <div class="face-guide" id="face-guide" style="display: none;"></div>
                     </div>
                     
-                    <div class="quality-indicators" id="quality-indicators" style="display: none;">
-                        <div class="quality-indicator" id="face-indicator">
-                            <div class="icon"></div>
-                            <span>Rosto</span>
-                        </div>
-                        <div class="quality-indicator" id="brightness-indicator">
-                            <div class="icon"></div>
-                            <span>Iluminação</span>
-                        </div>
-                        <div class="quality-indicator" id="size-indicator">
-                            <div class="icon"></div>
-                            <span>Tamanho</span>
-                        </div>
-                    </div>
-                    
                     <p class="camera-status" id="camera-status">Câmera desativada</p>
                     
                     <button type="button" class="btn btn-success" id="ativar-camera">
@@ -634,17 +619,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('video-container').classList.add('active');
                 
                 // Update UI
-                cameraStatus.textContent = 'Posicione seu rosto dentro do guia e aguarde a verificação';
+                cameraStatus.textContent = 'Câmera ativada! Clique para capturar sua foto';
+                cameraStatus.style.color = '#28a745';
                 ativarCameraBtn.textContent = 'CAPTURAR FOTO';
                 ativarCameraBtn.onclick = capturePhoto;
-                ativarCameraBtn.disabled = true; // Will be enabled when quality is good
-                
-                // Show face guide and quality indicators
+                ativarCameraBtn.disabled = false; // Botão sempre habilitado
+
+                // Show face guide
                 document.getElementById('face-guide').style.display = 'block';
-                document.getElementById('quality-indicators').style.display = 'flex';
-                
-                // Start real-time verification
-                startRealTimeVerification();
                 
                 console.log('Video metadata loaded, dimensions:', video.videoWidth, 'x', video.videoHeight);
             };
@@ -659,182 +641,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    let verificationInterval;
-    let qualityStatus = {
-        face: false,
-        brightness: false,
-        size: false
-    };
-
-    function startRealTimeVerification() {
-        // Start continuous quality verification
-        verificationInterval = setInterval(performQualityCheck, 500); // Check every 500ms
-    }
-
-    async function performQualityCheck() {
-        if (photoCaptured) {
-            clearInterval(verificationInterval);
-            return;
-        }
-
-        try {
-            // Set canvas to video size for analysis
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
-
-            // Draw current video frame
-            ctx.save();
-            ctx.scale(-1, 1);
-            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-            ctx.restore();
-
-            // Get image data for analysis
-            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-
-            // Analyze quality metrics
-            const faceDetected = await detectFace(imageDataUrl);
-            const brightness = calculateImageBrightness();
-            const faceSize = faceDetected ? calculateFaceSize(faceDetected) : 0;
-
-            // Update quality status
-            qualityStatus.face = faceDetected !== null;
-            qualityStatus.brightness = brightness >= 60 && brightness <= 180;
-            qualityStatus.size = faceSize >= 0.15 && faceSize <= 0.5;
-
-            // Update UI indicators
-            updateIndicator(document.getElementById('face-indicator'), qualityStatus.face);
-            updateIndicator(document.getElementById('brightness-indicator'), qualityStatus.brightness);
-            updateIndicator(document.getElementById('size-indicator'), qualityStatus.size);
-
-            // Update face guide visual feedback
-            const faceGuide = document.getElementById('face-guide');
-            if (qualityStatus.face) {
-                faceGuide.classList.add('detected');
-            } else {
-                faceGuide.classList.remove('detected');
-            }
-
-            // Enable/disable capture button based on all quality checks
-            const allQualityGood = qualityStatus.face && qualityStatus.brightness && qualityStatus.size;
-
-            if (allQualityGood) {
-                ativarCameraBtn.disabled = false;
-                ativarCameraBtn.style.backgroundColor = '#28a745';
-                cameraStatus.textContent = '✓ Qualidade adequada! Clique para capturar';
-                cameraStatus.style.color = '#28a745';
-            } else {
-                ativarCameraBtn.disabled = true;
-                ativarCameraBtn.style.backgroundColor = '#6c757d';
-
-                // Provide specific feedback
-                if (!qualityStatus.face) {
-                    cameraStatus.textContent = '⚠ Nenhum rosto detectado';
-                    cameraStatus.style.color = '#dc3545';
-                } else if (!qualityStatus.size) {
-                    if (faceSize < 0.15) {
-                        cameraStatus.textContent = '⚠ Aproxime-se da câmera';
-                    } else {
-                        cameraStatus.textContent = '⚠ Afaste-se da câmera';
-                    }
-                    cameraStatus.style.color = '#ffc107';
-                } else if (!qualityStatus.brightness) {
-                    if (brightness < 60) {
-                        cameraStatus.textContent = '⚠ Ambiente muito escuro';
-                    } else {
-                        cameraStatus.textContent = '⚠ Ambiente muito claro';
-                    }
-                    cameraStatus.style.color = '#ffc107';
-                }
-            }
-
-        } catch (error) {
-            console.error('Error in quality check:', error);
-        }
-    }
-
-    // Detect face using a simple method (color detection and shape analysis)
-    async function detectFace(imageDataUrl) {
-        try {
-            // Create a temporary image
-            const img = new Image();
-            img.src = imageDataUrl;
-
-            await new Promise((resolve) => {
-                img.onload = resolve;
-            });
-
-            // Create a temporary canvas for analysis
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = 160; // Reduce size for faster processing
-            tempCanvas.height = 120;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(img, 0, 0, 160, 120);
-
-            const imageData = tempCtx.getImageData(0, 0, 160, 120);
-            const data = imageData.data;
-
-            // Simple skin tone detection
-            let skinPixels = 0;
-            let totalPixels = 0;
-
-            for (let i = 0; i < data.length; i += 4) {
-                const r = data[i];
-                const g = data[i + 1];
-                const b = data[i + 2];
-
-                totalPixels++;
-
-                // Simple skin tone detection (HSV-based approximation)
-                // Skin tones typically have: R > 95, G > 40, B > 20, R > G, R > B
-                if (r > 95 && g > 40 && b > 20 &&
-                    r > g && r > b &&
-                    Math.abs(r - g) > 15) {
-                    skinPixels++;
-                }
-            }
-
-            const skinRatio = skinPixels / totalPixels;
-
-            // If more than 8% of pixels are skin-colored, assume face is present
-            return skinRatio > 0.08 ? { skinRatio } : null;
-
-        } catch (error) {
-            console.error('Face detection error:', error);
-            return null;
-        }
-    }
-
-    function calculateImageBrightness() {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        let sum = 0;
-
-        for (let i = 0; i < data.length; i += 4) {
-            // Calculate luminance using standard formula (ITU-R BT.709)
-            const r = data[i];
-            const g = data[i + 1];
-            const b = data[i + 2];
-            sum += (0.2126 * r + 0.7152 * g + 0.0722 * b);
-        }
-
-        return sum / (data.length / 4);
-    }
-
-    function calculateFaceSize(faceDetection) {
-        // Estimate face size based on skin pixel ratio
-        // This is a simplified approach
-        return faceDetection.skinRatio * 2; // Scale to approximate face area ratio
-    }
-    
-    function updateIndicator(indicator, isGood) {
-        indicator.className = 'quality-indicator ' + (isGood ? 'good' : 'bad');
-    }
+    // Validação de qualidade removida - captura direta permitida
     
     function capturePhoto() {
         if (photoCaptured) return;
-
-        // Stop real-time verification
-        clearInterval(verificationInterval);
 
         ativarCameraBtn.disabled = true;
         cameraStatus.textContent = 'Capturando foto...';
@@ -880,9 +690,8 @@ document.addEventListener('DOMContentLoaded', function() {
             stream.getTracks().forEach(track => track.stop());
         }
 
-        // Hide camera container and indicators
+        // Hide camera container
         document.getElementById('video-container').style.display = 'none';
-        document.getElementById('quality-indicators').style.display = 'none';
     }
     
     // Form validation
@@ -1030,9 +839,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('beforeunload', () => {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
-        }
-        if (verificationInterval) {
-            clearInterval(verificationInterval);
         }
     });
 });
